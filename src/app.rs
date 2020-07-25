@@ -12,14 +12,12 @@ use yew::{html, ChangeData, Component, ComponentLink, Html, ShouldRender};
 pub struct App {
     link: ComponentLink<Self>,
     tasks: Vec<ReaderTask>,
-    console: ConsoleService,
     files: Vec<FileInfo>,
 }
 
 struct FileInfo {
-    file: FileData,
+    file_data: FileData,
     img: HtmlImageElement,
-    // switched: HtmlImageElement,
 }
 
 pub enum Msg {
@@ -34,7 +32,6 @@ impl Component for App {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         App {
             link,
-            console: ConsoleService::default(),
             tasks: vec![],
             files: vec![],
         }
@@ -46,10 +43,8 @@ impl Component for App {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Loaded(file) => {
-                info!("loaded!");
-
-                let buffer = Uint8Array::from(file.content.as_slice());
+            Msg::Loaded(file_data) => {
+                let buffer = Uint8Array::from(file_data.content.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
                 let parts = Array::new_with_length(1);
                 parts.set(0, buffer_val.clone());
@@ -57,11 +52,7 @@ impl Component for App {
                 let img = HtmlImageElement::new().unwrap();
                 img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
 
-                self.files.push(FileInfo {
-                    file,
-                    img,
-                    // switched,
-                });
+                self.files.push(FileInfo { file_data, img });
             }
             Msg::Files(files) => {
                 for file in files.into_iter() {
@@ -69,7 +60,6 @@ impl Component for App {
                         let callback = self.link.callback(Msg::Loaded);
                         ReaderService::read_file(file, callback).unwrap()
                     };
-                    info!("file task created!");
                     self.tasks.push(task);
                 }
             }
@@ -78,7 +68,6 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
-        info!("rendered!");
         html! {
             <div class="colorswitch-wrapper">
                 <section class="main">
@@ -114,20 +103,8 @@ impl Component for App {
 impl App {
     fn view_file(&self, (idx, file_info): (usize, &FileInfo)) -> Html {
         // https://github.com/PsichiX/Oxygengine/blob/208b9d76c3bb6d2b29e320656dfaa0c8b30397ce/oxygengine-composite-renderer-backend-web/src/lib.rs
-
-        // let s = format!("file {}: {}", idx, file.name);
-        // let img = web_sys::HtmlImageElement::new().unwrap();
-        // img.set_src(&file.content);
-
         let node = Node::from(file_info.img.clone());
         let vnode = VNode::VRef(node);
-        // eprintln!("svg: {:?}", vnode);
         vnode
-
-        // html! {
-        //     <div>
-        //         { img }
-        //     </div>
-        // }
     }
 }
