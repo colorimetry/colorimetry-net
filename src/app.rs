@@ -1,46 +1,30 @@
-use log::*;
-use serde_derive::{Deserialize, Serialize};
-use strum::IntoEnumIterator;
-use strum_macros::{EnumIter, ToString};
-use yew::format::Json;
-use yew::prelude::*;
-use yew::services::storage::{Area, StorageService};
+// See https://github.com/AvraamMavridis/wasm-image-to-black-white
 
-const KEY: &str = "colorswitch.self";
+use js_sys::{Array, Uint8Array};
+use log::*;
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::{Blob, HtmlImageElement, Node, Url};
+use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
+use yew::services::ConsoleService;
+use yew::virtual_dom::VNode;
+use yew::{html, ChangeData, Component, ComponentLink, Html, ShouldRender};
 
 pub struct App {
     link: ComponentLink<Self>,
-    storage: StorageService,
-    state: State,
+    tasks: Vec<ReaderTask>,
+    console: ConsoleService,
+    files: Vec<FileInfo>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct State {
-    // entries: Vec<Entry>,
-    // filter: Filter,
-    // value: String,
-    // edit_value: String,
+struct FileInfo {
+    file: FileData,
+    img: HtmlImageElement,
+    // switched: HtmlImageElement,
 }
-
-// #[derive(Serialize, Deserialize)]
-// struct Entry {
-//     description: String,
-//     completed: bool,
-//     editing: bool,
-// }
 
 pub enum Msg {
-    // Add,
-    // Edit(usize),
-    // Update(String),
-    // UpdateEdit(String),
-    // Remove(usize),
-    // SetFilter(Filter),
-    // ToggleAll,
-    // ToggleEdit(usize),
-    // Toggle(usize),
-    // ClearCompleted,
-    Nope,
+    Loaded(FileData),
+    Files(Vec<File>),
 }
 
 impl Component for App {
@@ -48,24 +32,11 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let storage = StorageService::new(Area::Local).unwrap();
-        // let entries = {
-        //     if let Json(Ok(restored_entries)) = storage.restore(KEY) {
-        //         restored_entries
-        //     } else {
-        //         Vec::new()
-        //     }
-        // };
-        let state = State {
-            // entries,
-            // filter: Filter::All,
-            // value: "".into(),
-            // edit_value: "".into(),
-        };
         App {
             link,
-            storage,
-            state,
+            console: ConsoleService::default(),
+            tasks: vec![],
+            files: vec![],
         }
     }
 
@@ -75,84 +46,63 @@ impl Component for App {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            // Msg::Add => {
-            //     let entry = Entry {
-            //         description: self.state.value.clone(),
-            //         completed: false,
-            //         editing: false,
-            //     };
-            //     self.state.entries.push(entry);
-            //     self.state.value = "".to_string();
-            // }
-            // Msg::Edit(idx) => {
-            //     let edit_value = self.state.edit_value.clone();
-            //     self.state.complete_edit(idx, edit_value);
-            //     self.state.edit_value = "".to_string();
-            // }
-            // Msg::Update(val) => {
-            //     println!("Input: {}", val);
-            //     self.state.value = val;
-            // }
-            // Msg::UpdateEdit(val) => {
-            //     println!("Input: {}", val);
-            //     self.state.edit_value = val;
-            // }
-            // Msg::Remove(idx) => {
-            //     self.state.remove(idx);
-            // }
-            // Msg::SetFilter(filter) => {
-            //     self.state.filter = filter;
-            // }
-            // Msg::ToggleEdit(idx) => {
-            //     self.state.edit_value = self.state.entries[idx].description.clone();
-            //     self.state.toggle_edit(idx);
-            // }
-            // Msg::ToggleAll => {
-            //     let status = !self.state.is_all_completed();
-            //     self.state.toggle_all(status);
-            // }
-            // Msg::Toggle(idx) => {
-            //     self.state.toggle(idx);
-            // }
-            // Msg::ClearCompleted => {
-            //     self.state.clear_completed();
-            // }
-            Msg::Nope => {}
+            Msg::Loaded(file) => {
+                info!("loaded!");
+
+                let buffer = Uint8Array::from(file.content.as_slice());
+                let buffer_val: &JsValue = buffer.as_ref();
+                let parts = Array::new_with_length(1);
+                parts.set(0, buffer_val.clone());
+                let blob = Blob::new_with_u8_array_sequence(parts.as_ref()).unwrap();
+                let img = HtmlImageElement::new().unwrap();
+                img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
+
+                self.files.push(FileInfo {
+                    file,
+                    img,
+                    // switched,
+                });
+            }
+            Msg::Files(files) => {
+                for file in files.into_iter() {
+                    let task = {
+                        let callback = self.link.callback(Msg::Loaded);
+                        ReaderService::read_file(file, callback).unwrap()
+                    };
+                    info!("file task created!");
+                    self.tasks.push(task);
+                }
+            }
         }
-        // self.storage.store(KEY, Json(&self.state.entries));
         true
     }
 
     fn view(&self) -> Html {
         info!("rendered!");
         html! {
-            <div class="todomvc-wrapper">
-                // <section class="todoapp">
-                //     <header class="header">
-                //         <h1>{ "todos" }</h1>
-                //         { self.view_input() }
-                //     </header>
-                //     <section class="main">
-                //         <input class="toggle-all" type="checkbox" checked=self.state.is_all_completed() onclick=self.link.callback(|_| Msg::ToggleAll) />
-                //         <ul class="todo-list">
-                //             { for self.state.entries.iter().filter(|e| self.state.filter.fit(e))
-                //                 .enumerate()
-                //                 .map(|val| self.view_entry(val)) }
-                //         </ul>
-                //     </section>
-                //     <footer class="footer">
-                //         <span class="todo-count">
-                //             <strong>{ self.state.total() }</strong>
-                //             { " item(s) left" }
-                //         </span>
-                //         <ul class="filters">
-                //             { for Filter::iter().map(|flt| self.view_filter(flt)) }
-                //         </ul>
-                //         <button class="clear-completed" onclick=self.link.callback(|_| Msg::ClearCompleted)>
-                //             { format!("Clear completed ({})", self.state.total_completed()) }
-                //         </button>
-                //     </footer>
-                // </section>
+            <div class="colorswitch-wrapper">
+                <section class="main">
+                    <div>
+                        <p>{"Choose an image file to colorswitch."}</p>
+                        <input type="file" onchange=self.link.callback(move |value| {
+                                let mut result = Vec::new();
+                                if let ChangeData::Files(files) = value {
+                                    let files = js_sys::try_iter(&files)
+                                        .unwrap()
+                                        .unwrap()
+                                        .into_iter()
+                                        .map(|v| File::from(v.unwrap()));
+                                    result.extend(files);
+                                }
+                                Msg::Files(result)
+                            })/>
+                    </div>
+
+                    <ul class="file-list">
+                        { for self.files.iter().enumerate().map(|e| self.view_file(e)) }
+                    </ul>
+                </section>
+
                 <footer class="info">
                     <p>{ "Source code " }<a href="https://github.com/strawlab/colorswitch">{ "github.com/strawlab/colorswitch" }</a></p>
                 </footer>
@@ -162,195 +112,22 @@ impl Component for App {
 }
 
 impl App {
-    // fn view_filter(&self, filter: Filter) -> Html {
-    //     let flt = filter.clone();
+    fn view_file(&self, (idx, file_info): (usize, &FileInfo)) -> Html {
+        // https://github.com/PsichiX/Oxygengine/blob/208b9d76c3bb6d2b29e320656dfaa0c8b30397ce/oxygengine-composite-renderer-backend-web/src/lib.rs
 
-    //     html! {
-    //         <li>
-    //             <a class=if self.state.filter == flt { "selected" } else { "not-selected" }
-    //                href=&flt
-    //                onclick=self.link.callback(move |_| Msg::SetFilter(flt.clone()))>
-    //                 { filter }
-    //             </a>
-    //         </li>
-    //     }
-    // }
+        // let s = format!("file {}: {}", idx, file.name);
+        // let img = web_sys::HtmlImageElement::new().unwrap();
+        // img.set_src(&file.content);
 
-    // fn view_input(&self) -> Html {
-    //     html! {
-    //         // You can use standard Rust comments. One line:
-    //         // <li></li>
-    //         <input class="new-todo"
-    //                placeholder="What needs to be done?"
-    //                value=&self.state.value
-    //                oninput=self.link.callback(|e: InputData| Msg::Update(e.value))
-    //                onkeypress=self.link.callback(|e: KeyboardEvent| {
-    //                    if e.key() == "Enter" { Msg::Add } else { Msg::Nope }
-    //                }) />
-    //         /* Or multiline:
-    //         <ul>
-    //             <li></li>
-    //         </ul>
-    //         */
-    //     }
-    // }
+        let node = Node::from(file_info.img.clone());
+        let vnode = VNode::VRef(node);
+        // eprintln!("svg: {:?}", vnode);
+        vnode
 
-    // fn view_entry(&self, (idx, entry): (usize, &Entry)) -> Html {
-    //     let mut class = "todo".to_string();
-    //     if entry.editing {
-    //         class.push_str(" editing");
-    //     }
-    //     if entry.completed {
-    //         class.push_str(" completed");
-    //     }
-
-    //     html! {
-    //         <li class=class>
-    //             <div class="view">
-    //                 <input class="toggle" type="checkbox" checked=entry.completed onclick=self.link.callback(move |_| Msg::Toggle(idx)) />
-    //                 <label ondblclick=self.link.callback(move |_| Msg::ToggleEdit(idx))>{ &entry.description }</label>
-    //                 <button class="destroy" onclick=self.link.callback(move |_| Msg::Remove(idx)) />
-    //             </div>
-    //             { self.view_entry_edit_input((&idx, &entry)) }
-    //         </li>
-    //     }
-    // }
-
-    // fn view_entry_edit_input(&self, (idx, entry): (&usize, &Entry)) -> Html {
-    //     let idx = *idx;
-    //     if entry.editing {
-    //         html! {
-    //             <input class="edit"
-    //                    type="text"
-    //                    value=&entry.description
-    //                    oninput=self.link.callback(move |e: InputData| Msg::UpdateEdit(e.value))
-    //                    onblur=self.link.callback(move |_| Msg::Edit(idx))
-    //                    onkeypress=self.link.callback(move |e: KeyboardEvent| {
-    //                       if e.key() == "Enter" { Msg::Edit(idx) } else { Msg::Nope }
-    //                    }) />
-    //         }
-    //     } else {
-    //         html! { <input type="hidden" /> }
-    //     }
-    // }
+        // html! {
+        //     <div>
+        //         { img }
+        //     </div>
+        // }
+    }
 }
-
-// #[derive(EnumIter, ToString, Clone, PartialEq, Serialize, Deserialize)]
-// pub enum Filter {
-//     All,
-//     Active,
-//     Completed,
-// }
-
-// impl<'a> Into<Href> for &'a Filter {
-//     fn into(self) -> Href {
-//         match *self {
-//             Filter::All => "#/".into(),
-//             Filter::Active => "#/active".into(),
-//             Filter::Completed => "#/completed".into(),
-//         }
-//     }
-// }
-
-// impl Filter {
-//     fn fit(&self, entry: &Entry) -> bool {
-//         match *self {
-//             Filter::All => true,
-//             Filter::Active => !entry.completed,
-//             Filter::Completed => entry.completed,
-//         }
-//     }
-// }
-
-// impl State {
-//     fn total(&self) -> usize {
-//         self.entries.len()
-//     }
-
-//     fn total_completed(&self) -> usize {
-//         self.entries
-//             .iter()
-//             .filter(|e| Filter::Completed.fit(e))
-//             .count()
-//     }
-
-//     fn is_all_completed(&self) -> bool {
-//         let mut filtered_iter = self
-//             .entries
-//             .iter()
-//             .filter(|e| self.filter.fit(e))
-//             .peekable();
-
-//         if filtered_iter.peek().is_none() {
-//             return false;
-//         }
-
-//         filtered_iter.all(|e| e.completed)
-//     }
-
-//     fn toggle_all(&mut self, value: bool) {
-//         for entry in self.entries.iter_mut() {
-//             if self.filter.fit(entry) {
-//                 entry.completed = value;
-//             }
-//         }
-//     }
-
-//     fn clear_completed(&mut self) {
-//         let entries = self
-//             .entries
-//             .drain(..)
-//             .filter(|e| Filter::Active.fit(e))
-//             .collect();
-//         self.entries = entries;
-//     }
-
-//     fn toggle(&mut self, idx: usize) {
-//         let filter = self.filter.clone();
-//         let mut entries = self
-//             .entries
-//             .iter_mut()
-//             .filter(|e| filter.fit(e))
-//             .collect::<Vec<_>>();
-//         let entry = entries.get_mut(idx).unwrap();
-//         entry.completed = !entry.completed;
-//     }
-
-//     fn toggle_edit(&mut self, idx: usize) {
-//         let filter = self.filter.clone();
-//         let mut entries = self
-//             .entries
-//             .iter_mut()
-//             .filter(|e| filter.fit(e))
-//             .collect::<Vec<_>>();
-//         let entry = entries.get_mut(idx).unwrap();
-//         entry.editing = !entry.editing;
-//     }
-
-//     fn complete_edit(&mut self, idx: usize, val: String) {
-//         let filter = self.filter.clone();
-//         let mut entries = self
-//             .entries
-//             .iter_mut()
-//             .filter(|e| filter.fit(e))
-//             .collect::<Vec<_>>();
-//         let entry = entries.get_mut(idx).unwrap();
-//         entry.description = val;
-//         entry.editing = !entry.editing;
-//     }
-
-//     fn remove(&mut self, idx: usize) {
-//         let idx = {
-//             let filter = self.filter.clone();
-//             let entries = self
-//                 .entries
-//                 .iter()
-//                 .enumerate()
-//                 .filter(|&(_, e)| filter.fit(e))
-//                 .collect::<Vec<_>>();
-//             let &(idx, _) = entries.get(idx).unwrap();
-//             idx
-//         };
-//         self.entries.remove(idx);
-//     }
-// }
