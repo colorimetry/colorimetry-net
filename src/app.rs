@@ -1,11 +1,9 @@
 // See https://github.com/AvraamMavridis/wasm-image-to-black-white
 
 use js_sys::{Array, Uint8Array};
-use log::*;
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsValue;
 use web_sys::{Blob, HtmlImageElement, Node, Url};
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
-use yew::services::ConsoleService;
 use yew::virtual_dom::VNode;
 use yew::{html, ChangeData, Component, ComponentLink, Html, ShouldRender};
 
@@ -16,7 +14,7 @@ pub struct App {
 }
 
 struct FileInfo {
-    file_data: FileData,
+    _file_data: FileData,
     img: HtmlImageElement,
 }
 
@@ -52,7 +50,10 @@ impl Component for App {
                 let img = HtmlImageElement::new().unwrap();
                 img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
 
-                self.files.push(FileInfo { file_data, img });
+                self.files.push(FileInfo {
+                    _file_data: file_data,
+                    img,
+                });
             }
             Msg::Files(files) => {
                 for file in files.into_iter() {
