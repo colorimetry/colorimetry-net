@@ -125,7 +125,6 @@ pub enum Msg {
     Files(Vec<File>),
     ImageLoaded,
     ImageErrored(String),
-    // Resize(WindowDimensions),
 }
 
 impl Component for App {
@@ -151,7 +150,6 @@ impl Component for App {
             image_loaded_closure,
             image_error_closure,
             tasks: vec![],
-            // _resize_task: resize_task,
             c1_node_ref: NodeRef::default(),
             c1_context_2d: None,
             c1_canvas: None,
