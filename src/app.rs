@@ -290,34 +290,34 @@ impl Component for App {
             AppState::DecodingImage(_) => "Decoding image",
         };
         html! {
-            <div class="colorswitch-wrapper">
-                <section class="main">
-                    <div>
-                        <p>{ state }</p>
-                        <p>{"Choose an image file to colorswitch."}</p>
-                        <input type="file" onchange=self.link.callback(move |value| {
-                                let mut result = Vec::new();
-                                if let ChangeData::Files(files) = value {
-                                    let files = js_sys::try_iter(&files)
-                                        .unwrap()
-                                        .unwrap()
-                                        .into_iter()
-                                        .map(|v| File::from(v.unwrap()));
-                                    result.extend(files);
-                                }
-                                Msg::Files(result)
-                            })/>
-                    </div>
+            <div class="container">
 
-                    { self.view_file_info() }
+                <div>
+                    <p>{ state }</p>
+                    <p>{"Choose an image file to colorswitch."}</p>
+                    <input type="file" onchange=self.link.callback(move |value| {
+                            let mut result = Vec::new();
+                            if let ChangeData::Files(files) = value {
+                                let files = js_sys::try_iter(&files)
+                                    .unwrap()
+                                    .unwrap()
+                                    .into_iter()
+                                    .map(|v| File::from(v.unwrap()));
+                                result.extend(files);
+                            }
+                            Msg::Files(result)
+                        })/>
+                </div>
+
+                { self.view_file_info() }
+                <div class="colorswitch-canvas-div">
                     <canvas ref={self.node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
-                    { self.view_errors() }
+                </div>
+                { self.view_errors() }
 
-                </section>
-
-                <footer class="info">
+                <div class="info">
                     <p>{ "Source code " }<a href="https://github.com/strawlab/colorswitch">{ "github.com/strawlab/colorswitch" }</a></p>
-                </footer>
+                </div>
             </div>
         }
     }
