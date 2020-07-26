@@ -1,8 +1,6 @@
-// See https://github.com/AvraamMavridis/wasm-image-to-black-white
-
 use js_sys::{Array, Uint8Array};
 use wasm_bindgen::JsCast;
-use wasm_bindgen::{closure::Closure, JsValue};
+use wasm_bindgen::{closure::Closure, Clamped, JsValue};
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Url};
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
@@ -18,6 +16,8 @@ pub struct App {
     canvas: Option<HtmlCanvasElement>,
     state: AppState,
     error_log: Vec<String>,
+    image_canv_width: usize,
+    canv_height: usize,
 }
 
 pub enum AppState {
@@ -68,6 +68,8 @@ impl Component for App {
             canvas: None,
             state: AppState::Ready,
             error_log: vec![],
+            image_canv_width: 300,
+            canv_height: 200,
         }
     }
 
@@ -97,7 +99,47 @@ impl Component for App {
                 if let AppState::DecodingImage(file_info) = old_state {
                     // The image has finished loading (decoding).
                     if let Some(ctx) = self.context_2d.as_ref() {
-                        ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
+                        // ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
+                        //     .unwrap();
+
+                        ctx.draw_image_with_html_image_element_and_dw_and_dh(
+                            &file_info.img,
+                            0.0,
+                            0.0,
+                            self.image_canv_width as f64,
+                            self.canv_height as f64,
+                        )
+                        .unwrap();
+
+                        let image_data: web_sys::ImageData = ctx
+                            .get_image_data(
+                                0.0,
+                                0.0,
+                                self.image_canv_width as f64,
+                                self.canv_height as f64,
+                            )
+                            .unwrap();
+
+                        let w = image_data.width();
+                        let h = image_data.height();
+
+                        let mut data = image_data.data();
+                        let rgba: &mut [u8] = data.as_mut_slice();
+
+                        // set first 10 rows black
+                        log::info!("w {} h {}, h*w*4 {}, len {}", w, h, h * w * 4, rgba.len());
+                        for i in 0..(4 * 10 * w as usize) {
+                            rgba[i] = 0;
+                        }
+
+                        let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+                            Clamped(rgba),
+                            w,
+                            h,
+                        )
+                        .unwrap();
+
+                        ctx.put_image_data(&new_data, self.image_canv_width as f64, 0.0)
                             .unwrap();
                     }
                     self.file_info = Some(file_info);
@@ -168,7 +210,7 @@ impl Component for App {
                     </div>
 
                     { self.view_file_info() }
-                    <canvas ref={self.node_ref.clone()} />
+                    <canvas ref={self.node_ref.clone()}, width={self.image_canv_width*2}, height={self.canv_height} />
                     { self.view_errors() }
 
                 </section>
