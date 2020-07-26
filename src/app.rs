@@ -37,9 +37,13 @@ impl PositionInfo {
         }
     }
 
+    fn update_window_size(&mut self, dims: WindowDimensions) {
+        log::info!("window size: {:?}", dims);
+    }
+
     /// An image has been loaded, recalculate various sizing info.
     fn update_for_image(&mut self, img: &HtmlImageElement) {
-        // todo!();
+        log::info!("new image size");
     }
 
     /// The x postion of the original image in the canvas.
@@ -115,6 +119,11 @@ impl Component for App {
 
         let resize_task = ResizeService::register(link.callback(|dims| Msg::Resize(dims)));
 
+        let window = web_sys::window().unwrap();
+        let dimensions = WindowDimensions::get_dimensions(&window);
+        let mut position_info = PositionInfo::new();
+        position_info.update_window_size(dimensions);
+
         App {
             link,
             image_loaded_closure,
@@ -127,7 +136,7 @@ impl Component for App {
             canvas: None,
             state: AppState::Ready,
             error_log: vec![],
-            position_info: PositionInfo::new(),
+            position_info,
         }
     }
 
@@ -234,7 +243,8 @@ impl Component for App {
                 self.state = AppState::Ready;
             }
             Msg::Resize(dims) => {
-                log::info!("resized: {:?}", dims);
+                // log::info!("resized: {:?}", dims);
+                self.position_info.update_window_size(dims);
             }
             Msg::FileLoaded(file_data) => {
                 // The bytes of the file have been read.
