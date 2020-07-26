@@ -51,7 +51,8 @@ impl Component for App {
 
         let link2 = link.clone();
         let image_error_closure = Closure::wrap(Box::new(move |arg| {
-            let err_str = format!("{:?}", arg);
+            // let err_str = format!("Failed to load image.{:?}", arg);
+            let err_str = "Failed to load image.".into();
             log::error!("{:?}", arg);
             link2.send_message(Msg::ImageErrored(err_str));
         }) as Box<dyn FnMut(_)>);
