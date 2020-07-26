@@ -5,6 +5,16 @@ use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElemen
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
+fn color_switch(rgba: &mut [u8; 4]) {
+    // https://www.rapidtables.com/convert/color/rgb-to-hsv.html
+    let hsv = rgba[0] = 0;
+    rgba[1] = 255;
+    rgba[2] = 0;
+    rgba[3] = 255;
+
+    // See https://www.rapidtables.com/convert/color/hsv-to-rgb.html
+}
+
 pub struct App {
     link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
@@ -125,9 +135,10 @@ impl Component for App {
                         let mut data = image_data.data();
                         let rgba: &mut [u8] = data.as_mut_slice();
 
-                        // set first 10 rows clear
-                        for i in 0..(4 * 10 * w as usize) {
-                            rgba[i] = 0;
+                        for rgba_pixel in rgba.chunks_exact_mut(4) {
+                            // TODO: check that this is not doing bounds checks for each pixel.
+                            use std::convert::TryInto;
+                            color_switch(rgba_pixel.try_into().unwrap())
                         }
 
                         let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
