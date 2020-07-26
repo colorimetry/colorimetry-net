@@ -16,9 +16,12 @@ pub struct App {
     tasks: Vec<ReaderTask>,
     _resize_task: ResizeTask,
     file_info: Option<FileInfo>,
-    node_ref: NodeRef,
-    context_2d: Option<CanvasRenderingContext2d>,
-    canvas: Option<HtmlCanvasElement>,
+    c1_node_ref: NodeRef,
+    c1_context_2d: Option<CanvasRenderingContext2d>,
+    c1_canvas: Option<HtmlCanvasElement>,
+    c2_node_ref: NodeRef,
+    c2_context_2d: Option<CanvasRenderingContext2d>,
+    c2_canvas: Option<HtmlCanvasElement>,
     state: AppState,
     error_log: Vec<String>,
     position_info: PositionInfo,
@@ -46,14 +49,6 @@ impl PositionInfo {
         log::info!("new image size");
     }
 
-    /// The x postion of the original image in the canvas.
-    fn imorig_canv_x(&self) -> usize {
-        0
-    }
-    /// The y postion of the original image in the canvas.
-    fn imorig_canv_y(&self) -> usize {
-        0
-    }
     /// The width of the images in the canvas.
     fn image_canv_width(&self) -> usize {
         self.image_canv_width
@@ -64,19 +59,11 @@ impl PositionInfo {
     }
     /// The width of the canvas.
     fn canv_width(&self) -> usize {
-        self.image_canv_width * 2
+        self.image_canv_width
     }
     /// The height of the canvas.
     fn canv_height(&self) -> usize {
         self.canv_height
-    }
-    /// The x postion of the color shifted image in the canvas.
-    fn imshifted_canv_x(&self) -> usize {
-        self.image_canv_width
-    }
-    /// The y postion of the color shifted image in the canvas.
-    fn imshifted_canv_y(&self) -> usize {
-        0
     }
 }
 
@@ -130,10 +117,13 @@ impl Component for App {
             image_error_closure,
             tasks: vec![],
             _resize_task: resize_task,
-            node_ref: NodeRef::default(),
+            c1_node_ref: NodeRef::default(),
+            c1_context_2d: None,
+            c1_canvas: None,
+            c2_node_ref: NodeRef::default(),
+            c2_context_2d: None,
+            c2_canvas: None,
             file_info: None,
-            context_2d: None,
-            canvas: None,
             state: AppState::Ready,
             error_log: vec![],
             position_info,
@@ -148,14 +138,23 @@ impl Component for App {
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
 
-        let canvas = self.node_ref.cast::<HtmlCanvasElement>().unwrap();
+        let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
         let context_2d = CanvasRenderingContext2d::from(JsValue::from(
             canvas.get_context("2d").unwrap().unwrap(),
         ));
 
-        self.canvas = Some(canvas);
-        self.context_2d = Some(context_2d);
+        self.c1_canvas = Some(canvas);
+        self.c1_context_2d = Some(context_2d);
+
+        let canvas = self.c2_node_ref.cast::<HtmlCanvasElement>().unwrap();
+
+        let context_2d = CanvasRenderingContext2d::from(JsValue::from(
+            canvas.get_context("2d").unwrap().unwrap(),
+        ));
+
+        self.c2_canvas = Some(canvas);
+        self.c2_context_2d = Some(context_2d);
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -168,22 +167,24 @@ impl Component for App {
                     self.position_info.update_for_image(&file_info.img);
 
                     // The image has finished loading (decoding).
-                    if let Some(ctx) = self.context_2d.as_ref() {
+                    if let (Some(ctx1), Some(ctx2)) =
+                        (self.c1_context_2d.as_ref(), self.c2_context_2d.as_ref())
+                    {
                         // Draw the original image on the canvas.
-                        ctx.draw_image_with_html_image_element_and_dw_and_dh(
+                        ctx1.draw_image_with_html_image_element_and_dw_and_dh(
                             &file_info.img,
-                            self.position_info.imorig_canv_x() as f64,
-                            self.position_info.imorig_canv_y() as f64,
+                            0.0,
+                            0.0,
                             self.position_info.image_canv_width() as f64,
                             self.position_info.image_canv_height() as f64,
                         )
                         .unwrap();
 
                         // Read the original image data from the canvas.
-                        let image_data: web_sys::ImageData = ctx
+                        let image_data: web_sys::ImageData = ctx1
                             .get_image_data(
-                                self.position_info.imorig_canv_x() as f64,
-                                self.position_info.imorig_canv_y() as f64,
+                                0.0,
+                                0.0,
                                 self.position_info.image_canv_width() as f64,
                                 self.position_info.image_canv_height() as f64,
                             )
@@ -227,12 +228,7 @@ impl Component for App {
 
                             new_data
                         };
-                        ctx.put_image_data(
-                            &new_data,
-                            self.position_info.imshifted_canv_x() as f64,
-                            self.position_info.imshifted_canv_y() as f64,
-                        )
-                        .unwrap();
+                        ctx2.put_image_data(&new_data, 0.0, 0.0).unwrap();
                     }
                     self.file_info = Some(file_info);
                 }
@@ -311,7 +307,8 @@ impl Component for App {
 
                 { self.view_file_info() }
                 <div class="colorswitch-canvas-div">
-                    <canvas ref={self.node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                    <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                    <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                 </div>
                 { self.view_errors() }
 
