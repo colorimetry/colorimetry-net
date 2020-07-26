@@ -249,7 +249,7 @@ impl Component for App {
                 for file in files.into_iter() {
                     let task = {
                         let callback = self.link.callback(Msg::FileLoaded);
-                        ReaderService::read_file(file, callback).unwrap()
+                        ReaderService::new().read_file(file, callback).unwrap()
                     };
                     self.tasks.push(task);
                 }
