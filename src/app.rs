@@ -36,7 +36,6 @@ pub enum Msg {
     Files(Vec<File>),
     ImageLoaded,
     ImageErrored(String),
-    ClearErrors,
 }
 
 impl Component for App {
@@ -126,8 +125,7 @@ impl Component for App {
                         let mut data = image_data.data();
                         let rgba: &mut [u8] = data.as_mut_slice();
 
-                        // set first 10 rows black
-                        log::info!("w {} h {}, h*w*4 {}, len {}", w, h, h * w * 4, rgba.len());
+                        // set first 10 rows clear
                         for i in 0..(4 * 10 * w as usize) {
                             rgba[i] = 0;
                         }
@@ -149,9 +147,6 @@ impl Component for App {
                 self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
-            Msg::ClearErrors => {
-                self.error_log.clear();
-            }
             Msg::FileLoaded(file_data) => {
                 let buffer = Uint8Array::from(file_data.content.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
@@ -169,6 +164,8 @@ impl Component for App {
                 self.state = AppState::DecodingImage(FileInfo { file_data, img });
             }
             Msg::Files(files) => {
+                self.error_log.clear();
+
                 self.state = AppState::ReadingFile;
 
                 for file in files.into_iter() {
@@ -245,9 +242,6 @@ impl App {
             html! {
                 <div>
                     { for self.error_log.iter().map(render_error)}
-
-                    <button onclick=self.link.callback(|_| Msg::ClearErrors)>{"clear errors"}
-                    </button>
                 </div>
             }
         } else {

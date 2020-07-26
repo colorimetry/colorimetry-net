@@ -30,5 +30,6 @@ features = [
   'CanvasRenderingContext2d',
   'HtmlCanvasElement',
   'HtmlImageElement',
+  'ImageData',
   'Url',
 ]
