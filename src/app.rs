@@ -3,7 +3,10 @@ use palette::{Pixel, Srgba};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, Clamped, JsValue};
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Url};
-use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
+use yew::services::{
+    reader::{File, FileData, ReaderService, ReaderTask},
+    resize::{ResizeService, ResizeTask, WindowDimensions},
+};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
 pub struct App {
@@ -11,14 +14,66 @@ pub struct App {
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
     image_error_closure: Closure<dyn FnMut(JsValue)>,
     tasks: Vec<ReaderTask>,
+    _resize_task: ResizeTask,
     file_info: Option<FileInfo>,
     node_ref: NodeRef,
     context_2d: Option<CanvasRenderingContext2d>,
     canvas: Option<HtmlCanvasElement>,
     state: AppState,
     error_log: Vec<String>,
-    image_canv_width: usize,
+    position_info: PositionInfo,
+}
+
+pub struct PositionInfo {
     canv_height: usize,
+    image_canv_width: usize,
+}
+
+impl PositionInfo {
+    fn new() -> Self {
+        Self {
+            image_canv_width: 300,
+            canv_height: 200,
+        }
+    }
+
+    /// An image has been loaded, recalculate various sizing info.
+    fn update_for_image(&mut self, img: &HtmlImageElement) {
+        // todo!();
+    }
+
+    /// The x postion of the original image in the canvas.
+    fn imorig_canv_x(&self) -> usize {
+        0
+    }
+    /// The y postion of the original image in the canvas.
+    fn imorig_canv_y(&self) -> usize {
+        0
+    }
+    /// The width of the images in the canvas.
+    fn image_canv_width(&self) -> usize {
+        self.image_canv_width
+    }
+    /// The height of the images in the canvas.
+    fn image_canv_height(&self) -> usize {
+        self.canv_height * 2
+    }
+    /// The width of the canvas.
+    fn canv_width(&self) -> usize {
+        self.image_canv_width * 2
+    }
+    /// The height of the canvas.
+    fn canv_height(&self) -> usize {
+        self.canv_height
+    }
+    /// The x postion of the color shifted image in the canvas.
+    fn imshifted_canv_x(&self) -> usize {
+        self.image_canv_width
+    }
+    /// The y postion of the color shifted image in the canvas.
+    fn imshifted_canv_y(&self) -> usize {
+        0
+    }
 }
 
 pub enum AppState {
@@ -37,6 +92,7 @@ pub enum Msg {
     Files(Vec<File>),
     ImageLoaded,
     ImageErrored(String),
+    Resize(WindowDimensions),
 }
 
 impl Component for App {
@@ -57,19 +113,21 @@ impl Component for App {
             link2.send_message(Msg::ImageErrored(err_str));
         }) as Box<dyn FnMut(_)>);
 
+        let resize_task = ResizeService::register(link.callback(|dims| Msg::Resize(dims)));
+
         App {
             link,
             image_loaded_closure,
             image_error_closure,
             tasks: vec![],
+            _resize_task: resize_task,
             node_ref: NodeRef::default(),
             file_info: None,
             context_2d: None,
             canvas: None,
             state: AppState::Ready,
             error_log: vec![],
-            image_canv_width: 300,
-            canv_height: 200,
+            position_info: PositionInfo::new(),
         }
     }
 
@@ -94,73 +152,94 @@ impl Component for App {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::ImageLoaded => {
+                // The image has finished decoding and we can display it now.
                 let old_state = std::mem::replace(&mut self.state, AppState::Ready);
 
                 if let AppState::DecodingImage(file_info) = old_state {
+                    self.position_info.update_for_image(&file_info.img);
+
                     // The image has finished loading (decoding).
                     if let Some(ctx) = self.context_2d.as_ref() {
+                        // Draw the original image on the canvas.
                         ctx.draw_image_with_html_image_element_and_dw_and_dh(
                             &file_info.img,
-                            0.0,
-                            0.0,
-                            self.image_canv_width as f64,
-                            self.canv_height as f64,
+                            self.position_info.imorig_canv_x() as f64,
+                            self.position_info.imorig_canv_y() as f64,
+                            self.position_info.image_canv_width() as f64,
+                            self.position_info.image_canv_height() as f64,
                         )
                         .unwrap();
 
+                        // Read the original image data from the canvas.
                         let image_data: web_sys::ImageData = ctx
                             .get_image_data(
-                                0.0,
-                                0.0,
-                                self.image_canv_width as f64,
-                                self.canv_height as f64,
+                                self.position_info.imorig_canv_x() as f64,
+                                self.position_info.imorig_canv_y() as f64,
+                                self.position_info.image_canv_width() as f64,
+                                self.position_info.image_canv_height() as f64,
                             )
                             .unwrap();
 
                         let w = image_data.width();
                         let h = image_data.height();
+                        debug_assert!(w as usize == self.position_info.image_canv_width());
+                        debug_assert!(h as usize == self.position_info.image_canv_height());
 
-                        let mut data = image_data.data();
-                        let rgba: &mut [u8] = data.as_mut_slice();
+                        let new_data = {
+                            let mut data = image_data.data();
 
-                        let color_buffer: &mut [Srgba<u8>] = Pixel::from_raw_slice_mut(rgba);
-                        for pix in color_buffer.iter_mut() {
-                            let rgb: palette::rgb::Rgb<palette::encoding::Srgb, u8> = pix.color;
-                            let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
-                                rgb.into_format();
+                            let color_buffer: &mut [Srgba<u8>] =
+                                Pixel::from_raw_slice_mut(data.as_mut_slice());
+                            for pix in color_buffer.iter_mut() {
+                                let rgb: palette::rgb::Rgb<palette::encoding::Srgb, u8> = pix.color;
+                                let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
+                                    rgb.into_format();
 
-                            use palette::ConvertInto;
-                            let mut hsv_f32: palette::Hsv<palette::encoding::Srgb, f32> =
-                                rgb_f32.convert_into();
-                            hsv_f32.saturation *= 4.0;
-                            hsv_f32.hue =
-                                palette::RgbHue::from_degrees(hsv_f32.hue.to_degrees() + 180.0);
+                                use palette::ConvertInto;
+                                let mut hsv_f32: palette::Hsv<palette::encoding::Srgb, f32> =
+                                    rgb_f32.convert_into();
+                                hsv_f32.saturation *= 4.0;
+                                hsv_f32.hue =
+                                    palette::RgbHue::from_degrees(hsv_f32.hue.to_degrees() + 180.0);
 
-                            let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
-                                hsv_f32.convert_into();
-                            let rgb_u8: palette::rgb::Rgb<palette::encoding::Srgb, u8> =
-                                rgb_f32.into_format();
-                            pix.color = rgb_u8;
-                        }
+                                let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
+                                    hsv_f32.convert_into();
+                                let rgb_u8: palette::rgb::Rgb<palette::encoding::Srgb, u8> =
+                                    rgb_f32.into_format();
+                                pix.color = rgb_u8;
+                            }
 
-                        let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
-                            Clamped(rgba),
-                            w,
-                            h,
+                            let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+                                Clamped(data.as_mut_slice()),
+                                w,
+                                h,
+                            )
+                            .unwrap();
+
+                            new_data
+                        };
+                        ctx.put_image_data(
+                            &new_data,
+                            self.position_info.imshifted_canv_x() as f64,
+                            self.position_info.imshifted_canv_y() as f64,
                         )
                         .unwrap();
-
-                        ctx.put_image_data(&new_data, self.image_canv_width as f64, 0.0)
-                            .unwrap();
                     }
                     self.file_info = Some(file_info);
                 }
             }
             Msg::ImageErrored(err_str) => {
+                // The image was not decoded due to an error.
                 self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
+            Msg::Resize(dims) => {
+                log::info!("resized: {:?}", dims);
+            }
             Msg::FileLoaded(file_data) => {
+                // The bytes of the file have been read.
+
+                // Convert to a Uint8Array and initiate the image decoding.
                 let buffer = Uint8Array::from(file_data.content.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
                 let parts = Array::new_with_length(1);
@@ -177,6 +256,7 @@ impl Component for App {
                 self.state = AppState::DecodingImage(FileInfo { file_data, img });
             }
             Msg::Files(files) => {
+                // The user has selected file(s).
                 self.error_log.clear();
 
                 self.state = AppState::ReadingFile;
@@ -220,7 +300,7 @@ impl Component for App {
                     </div>
 
                     { self.view_file_info() }
-                    <canvas ref={self.node_ref.clone()}, width={self.image_canv_width*2}, height={self.canv_height} />
+                    <canvas ref={self.node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                     { self.view_errors() }
 
                 </section>
