@@ -1,14 +1,17 @@
 // See https://github.com/AvraamMavridis/wasm-image-to-black-white
 
 use js_sys::{Array, Uint8Array};
-use wasm_bindgen::JsValue;
-use web_sys::{Blob, HtmlImageElement, Node, Url};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Node, Url};
+use yew::prelude::*;
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::virtual_dom::VNode;
-use yew::{html, ChangeData, Component, ComponentLink, Html, ShouldRender};
+use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
 pub struct App {
     link: ComponentLink<Self>,
+    image_loaded_closure: Closure<dyn FnMut(JsValue)>,
     tasks: Vec<ReaderTask>,
     files: Vec<FileInfo>,
 }
@@ -16,11 +19,13 @@ pub struct App {
 struct FileInfo {
     _file_data: FileData,
     img: HtmlImageElement,
+    node_ref: NodeRef,
 }
 
 pub enum Msg {
-    Loaded(FileData),
+    FileLoaded(FileData),
     Files(Vec<File>),
+    ImageLoaded,
 }
 
 impl Component for App {
@@ -28,8 +33,14 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let link2 = link.clone();
+        let image_loaded_closure = Closure::wrap(Box::new(move |_| {
+            link2.send_message(Msg::ImageLoaded);
+        }) as Box<dyn FnMut(JsValue)>);
+
         App {
             link,
+            image_loaded_closure,
             tasks: vec![],
             files: vec![],
         }
@@ -41,24 +52,34 @@ impl Component for App {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Loaded(file_data) => {
+            Msg::ImageLoaded => {
+                // We have this just for the side effect of rendering again.
+            }
+            Msg::FileLoaded(file_data) => {
+                let idx = self.files.len();
                 let buffer = Uint8Array::from(file_data.content.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
                 let parts = Array::new_with_length(1);
                 parts.set(0, buffer_val.clone());
                 let blob = Blob::new_with_u8_array_sequence(parts.as_ref()).unwrap();
                 let img = HtmlImageElement::new().unwrap();
+
+                img.set_onload(Some(self.image_loaded_closure.as_ref().unchecked_ref()));
+
                 img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
+
+                let node_ref = NodeRef::default();
 
                 self.files.push(FileInfo {
                     _file_data: file_data,
+                    node_ref,
                     img,
                 });
             }
             Msg::Files(files) => {
                 for file in files.into_iter() {
                     let task = {
-                        let callback = self.link.callback(Msg::Loaded);
+                        let callback = self.link.callback(Msg::FileLoaded);
                         ReaderService::read_file(file, callback).unwrap()
                     };
                     self.tasks.push(task);
@@ -103,9 +124,27 @@ impl Component for App {
 
 impl App {
     fn view_file(&self, (idx, file_info): (usize, &FileInfo)) -> Html {
-        // https://github.com/PsichiX/Oxygengine/blob/208b9d76c3bb6d2b29e320656dfaa0c8b30397ce/oxygengine-composite-renderer-backend-web/src/lib.rs
-        let node = Node::from(file_info.img.clone());
-        let vnode = VNode::VRef(node);
-        vnode
+        log::info!("view 1");
+        if let Some(canvas) = file_info.node_ref.cast::<HtmlCanvasElement>() {
+            log::info!("view 2");
+
+            let ctx = CanvasRenderingContext2d::from(JsValue::from(
+                canvas.get_context("2d").unwrap().unwrap(),
+            ));
+
+            log::info!(
+                "{}: {}x{}",
+                file_info._file_data.name,
+                file_info.img.width(),
+                file_info.img.height()
+            );
+
+            ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
+                .unwrap();
+        }
+
+        html! {
+            <canvas ref={file_info.node_ref.clone()} />
+        }
     }
 }

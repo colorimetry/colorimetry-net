@@ -27,6 +27,8 @@ wasm-bindgen-test = "0.3"
 version = "0.3.4"
 features = [
   'Blob',
+  'CanvasRenderingContext2d',
+  'HtmlCanvasElement',
   'HtmlImageElement',
   'Url',
 ]
