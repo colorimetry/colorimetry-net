@@ -3,10 +3,7 @@ use palette::{Pixel, Srgba};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, Clamped, JsValue};
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Url};
-use yew::services::{
-    reader::{File, FileData, ReaderService, ReaderTask},
-    resize::{ResizeService, ResizeTask, WindowDimensions},
-};
+use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
 pub struct App {
@@ -14,7 +11,6 @@ pub struct App {
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
     image_error_closure: Closure<dyn FnMut(JsValue)>,
     tasks: Vec<ReaderTask>,
-    _resize_task: ResizeTask,
     file_info: Option<FileInfo>,
     c1_node_ref: NodeRef,
     c1_context_2d: Option<CanvasRenderingContext2d>,
@@ -40,8 +36,8 @@ impl PositionInfo {
         }
     }
 
-    fn update_window_size(&mut self, dims: WindowDimensions) {
-        log::info!("window size: {:?}", dims);
+    fn update_window_size(&mut self, w: i32, h: i32) {
+        log::info!("window size: {}x{}", w, h);
     }
 
     /// An image has been loaded, recalculate various sizing info.
@@ -83,7 +79,7 @@ pub enum Msg {
     Files(Vec<File>),
     ImageLoaded,
     ImageErrored(String),
-    Resize(WindowDimensions),
+    // Resize(WindowDimensions),
 }
 
 impl Component for App {
@@ -104,19 +100,12 @@ impl Component for App {
             link2.send_message(Msg::ImageErrored(err_str));
         }) as Box<dyn FnMut(_)>);
 
-        let resize_task = ResizeService::register(link.callback(|dims| Msg::Resize(dims)));
-
-        let window = web_sys::window().unwrap();
-        let dimensions = WindowDimensions::get_dimensions(&window);
-        let mut position_info = PositionInfo::new();
-        position_info.update_window_size(dimensions);
-
         App {
             link,
             image_loaded_closure,
             image_error_closure,
             tasks: vec![],
-            _resize_task: resize_task,
+            // _resize_task: resize_task,
             c1_node_ref: NodeRef::default(),
             c1_context_2d: None,
             c1_canvas: None,
@@ -126,7 +115,7 @@ impl Component for App {
             file_info: None,
             state: AppState::Ready,
             error_log: vec![],
-            position_info,
+            position_info: PositionInfo::new(),
         }
     }
 
@@ -137,6 +126,18 @@ impl Component for App {
     fn rendered(&mut self, _first_render: bool) {
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
+
+        let document = yew::utils::document();
+        let div_wrapper: web_sys::Element = document
+            .query_selector("#colorswitch-canvas-div")
+            .unwrap()
+            .unwrap();
+
+        // Get inner dimensions of div containing canvases.
+        let div_w = div_wrapper.client_width();
+        let div_h = div_wrapper.client_height();
+
+        self.position_info.update_window_size(div_w, div_h);
 
         let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
@@ -238,10 +239,6 @@ impl Component for App {
                 self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
-            Msg::Resize(dims) => {
-                // log::info!("resized: {:?}", dims);
-                self.position_info.update_window_size(dims);
-            }
             Msg::FileLoaded(file_data) => {
                 // The bytes of the file have been read.
 
@@ -306,9 +303,11 @@ impl Component for App {
                 </div>
 
                 { self.view_file_info() }
-                <div class="colorswitch-canvas-div">
-                    <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
-                    <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                <div id="colorswitch-canvas-div">
+                    <div id="colorswitch-canvas-container">
+                        <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                        <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                    </div>
                 </div>
                 { self.view_errors() }
 
