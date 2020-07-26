@@ -24,41 +24,87 @@ pub struct App {
 }
 
 pub struct PositionInfo {
-    canv_height: usize,
-    image_canv_width: usize,
+    container_dims: Option<(i32, i32)>,
+    image_dims: Option<(u32, u32)>,
+    image_canv_width: i32,
+    image_canv_height: i32,
+    canv_width: i32,
+    canv_height: i32,
 }
 
 impl PositionInfo {
     fn new() -> Self {
         Self {
+            container_dims: None,
+            image_dims: None,
             image_canv_width: 300,
+            image_canv_height: 200,
+            canv_width: 300,
             canv_height: 200,
         }
     }
 
-    fn update_window_size(&mut self, w: i32, h: i32) {
-        log::info!("window size: {}x{}", w, h);
+    fn update_inner(&mut self) {
+        if let (Some(container_dims), Some(image_dims)) = (self.container_dims, self.image_dims) {
+            // log::info!("image_dims: {:?}", image_dims);
+            // log::info!("container_dims: {:?}", container_dims);
+            let pad = 20;
+            let width_ratio = (image_dims.0 * 2 + pad) as f64 / container_dims.0 as f64;
+            let height_ratio = (image_dims.1 * 2 + pad) as f64 / container_dims.1 as f64;
+
+            let image_aspect = image_dims.0 as f64 / image_dims.1 as f64;
+
+            // log::info!("width_ratio {}, height_ratio {}", width_ratio, height_ratio);
+
+            if width_ratio > height_ratio {
+                // maximize width
+                self.canv_width = container_dims.0 - pad as i32 / 2;
+                self.canv_height = (self.canv_width as f64 / image_aspect) as i32;
+            } else {
+                // maximize height
+                self.canv_height = container_dims.1 - pad as i32 / 2;
+                self.canv_width = (self.canv_height as f64 * image_aspect) as i32;
+            }
+            self.image_canv_width = self.canv_width;
+            self.image_canv_height = self.canv_height;
+        }
+    }
+
+    /// The div that contains the image canvases has changed size.
+    fn set_container_size(&mut self, w: i32, h: i32) -> bool {
+        let new_size = Some((w, h));
+        let recompute_canvas = if new_size == self.container_dims {
+            false // recomputing canvas contents is not required
+        } else {
+            // log::info!("new container size: {}x{}", w, h);
+            self.container_dims = Some((w, h));
+            true // recomputing canvas contents is required
+        };
+        self.update_inner();
+        recompute_canvas
     }
 
     /// An image has been loaded, recalculate various sizing info.
     fn update_for_image(&mut self, img: &HtmlImageElement) {
-        log::info!("new image size");
+        // log::info!("got image size");
+        self.image_dims = Some((img.width(), img.height()));
+        self.update_inner();
     }
 
     /// The width of the images in the canvas.
-    fn image_canv_width(&self) -> usize {
+    fn image_canv_width(&self) -> i32 {
         self.image_canv_width
     }
     /// The height of the images in the canvas.
-    fn image_canv_height(&self) -> usize {
-        self.canv_height * 2
+    fn image_canv_height(&self) -> i32 {
+        self.image_canv_height
     }
     /// The width of the canvas.
-    fn canv_width(&self) -> usize {
-        self.image_canv_width
+    fn canv_width(&self) -> i32 {
+        self.canv_width
     }
     /// The height of the canvas.
-    fn canv_height(&self) -> usize {
+    fn canv_height(&self) -> i32 {
         self.canv_height
     }
 }
@@ -137,7 +183,9 @@ impl Component for App {
         let div_w = div_wrapper.client_width();
         let div_h = div_wrapper.client_height();
 
-        self.position_info.update_window_size(div_w, div_h);
+        if self.position_info.set_container_size(div_w, div_h) {
+            self.update_canvas_contents();
+        }
 
         let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
@@ -166,72 +214,8 @@ impl Component for App {
 
                 if let AppState::DecodingImage(file_info) = old_state {
                     self.position_info.update_for_image(&file_info.img);
-
-                    // The image has finished loading (decoding).
-                    if let (Some(ctx1), Some(ctx2)) =
-                        (self.c1_context_2d.as_ref(), self.c2_context_2d.as_ref())
-                    {
-                        // Draw the original image on the canvas.
-                        ctx1.draw_image_with_html_image_element_and_dw_and_dh(
-                            &file_info.img,
-                            0.0,
-                            0.0,
-                            self.position_info.image_canv_width() as f64,
-                            self.position_info.image_canv_height() as f64,
-                        )
-                        .unwrap();
-
-                        // Read the original image data from the canvas.
-                        let image_data: web_sys::ImageData = ctx1
-                            .get_image_data(
-                                0.0,
-                                0.0,
-                                self.position_info.image_canv_width() as f64,
-                                self.position_info.image_canv_height() as f64,
-                            )
-                            .unwrap();
-
-                        let w = image_data.width();
-                        let h = image_data.height();
-                        debug_assert!(w as usize == self.position_info.image_canv_width());
-                        debug_assert!(h as usize == self.position_info.image_canv_height());
-
-                        let new_data = {
-                            let mut data = image_data.data();
-
-                            let color_buffer: &mut [Srgba<u8>] =
-                                Pixel::from_raw_slice_mut(data.as_mut_slice());
-                            for pix in color_buffer.iter_mut() {
-                                let rgb: palette::rgb::Rgb<palette::encoding::Srgb, u8> = pix.color;
-                                let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
-                                    rgb.into_format();
-
-                                use palette::ConvertInto;
-                                let mut hsv_f32: palette::Hsv<palette::encoding::Srgb, f32> =
-                                    rgb_f32.convert_into();
-                                hsv_f32.saturation *= 4.0;
-                                hsv_f32.hue =
-                                    palette::RgbHue::from_degrees(hsv_f32.hue.to_degrees() + 180.0);
-
-                                let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
-                                    hsv_f32.convert_into();
-                                let rgb_u8: palette::rgb::Rgb<palette::encoding::Srgb, u8> =
-                                    rgb_f32.into_format();
-                                pix.color = rgb_u8;
-                            }
-
-                            let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
-                                Clamped(data.as_mut_slice()),
-                                w,
-                                h,
-                            )
-                            .unwrap();
-
-                            new_data
-                        };
-                        ctx2.put_image_data(&new_data, 0.0, 0.0).unwrap();
-                    }
                     self.file_info = Some(file_info);
+                    self.update_canvas_contents();
                 }
             }
             Msg::ImageErrored(err_str) => {
@@ -345,6 +329,83 @@ impl App {
             }
         } else {
             html! {}
+        }
+    }
+
+    /// Redraw the canvases.
+    ///
+    /// We need to do this either when we get a new image decoded or
+    /// when the dimensions of our container change.
+    fn update_canvas_contents(&self) {
+        if let Some(file_info) = &self.file_info {
+            // The image has finished loading (decoding).
+            if let (Some(ctx1), Some(ctx2)) =
+                (self.c1_context_2d.as_ref(), self.c2_context_2d.as_ref())
+            {
+                // Draw the original image on the canvas.
+                ctx1.draw_image_with_html_image_element_and_dw_and_dh(
+                    &file_info.img,
+                    0.0,
+                    0.0,
+                    self.position_info.image_canv_width() as f64,
+                    self.position_info.image_canv_height() as f64,
+                )
+                .unwrap();
+
+                // Read the original image data from the canvas.
+                let image_data: web_sys::ImageData = ctx1
+                    .get_image_data(
+                        0.0,
+                        0.0,
+                        self.position_info.image_canv_width() as f64,
+                        self.position_info.image_canv_height() as f64,
+                    )
+                    .unwrap();
+
+                let w = image_data.width();
+                let h = image_data.height();
+                debug_assert!(w as i32 == self.position_info.image_canv_width());
+                debug_assert!(h as i32 == self.position_info.image_canv_height());
+
+                let new_data = {
+                    use palette::Limited;
+                    let mut data = image_data.data();
+
+                    let color_buffer: &mut [Srgba<u8>] =
+                        Pixel::from_raw_slice_mut(data.as_mut_slice());
+                    for pix in color_buffer.iter_mut() {
+                        let rgb: palette::rgb::Rgb<palette::encoding::Srgb, u8> = pix.color;
+                        let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
+                            rgb.into_format();
+
+                        use palette::ConvertInto;
+                        let mut hsv_f32: palette::Hsv<palette::encoding::Srgb, f32> =
+                            rgb_f32.convert_into();
+                        hsv_f32.saturation *= 4.0;
+                        // hsv_f32.saturation *= 3.0;
+                        hsv_f32.clamp_self();
+                        hsv_f32.hue =
+                            palette::RgbHue::from_degrees(hsv_f32.hue.to_degrees() + 180.0);
+
+                        hsv_f32.clamp_self();
+                        let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
+                            hsv_f32.convert_into();
+                        let rgb_u8: palette::rgb::Rgb<palette::encoding::Srgb, u8> =
+                            rgb_f32.into_format();
+                        pix.color = rgb_u8;
+                    }
+
+                    let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+                        Clamped(data.as_mut_slice()),
+                        w,
+                        h,
+                    )
+                    .unwrap();
+
+                    new_data
+                };
+                ctx2.put_image_data(&new_data, 0.0, 0.0).unwrap();
+            }
         }
     }
 }
