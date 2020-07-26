@@ -1,19 +1,10 @@
 use js_sys::{Array, Uint8Array};
+use palette::{Pixel, Srgba};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, Clamped, JsValue};
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Url};
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
-
-fn color_switch(rgba: &mut [u8; 4]) {
-    // https://www.rapidtables.com/convert/color/rgb-to-hsv.html
-    let hsv = rgba[0] = 0;
-    rgba[1] = 255;
-    rgba[2] = 0;
-    rgba[3] = 255;
-
-    // See https://www.rapidtables.com/convert/color/hsv-to-rgb.html
-}
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -108,9 +99,6 @@ impl Component for App {
                 if let AppState::DecodingImage(file_info) = old_state {
                     // The image has finished loading (decoding).
                     if let Some(ctx) = self.context_2d.as_ref() {
-                        // ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
-                        //     .unwrap();
-
                         ctx.draw_image_with_html_image_element_and_dw_and_dh(
                             &file_info.img,
                             0.0,
@@ -135,10 +123,24 @@ impl Component for App {
                         let mut data = image_data.data();
                         let rgba: &mut [u8] = data.as_mut_slice();
 
-                        for rgba_pixel in rgba.chunks_exact_mut(4) {
-                            // TODO: check that this is not doing bounds checks for each pixel.
-                            use std::convert::TryInto;
-                            color_switch(rgba_pixel.try_into().unwrap())
+                        let color_buffer: &mut [Srgba<u8>] = Pixel::from_raw_slice_mut(rgba);
+                        for pix in color_buffer.iter_mut() {
+                            let rgb: palette::rgb::Rgb<palette::encoding::Srgb, u8> = pix.color;
+                            let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
+                                rgb.into_format();
+
+                            use palette::ConvertInto;
+                            let mut hsv_f32: palette::Hsv<palette::encoding::Srgb, f32> =
+                                rgb_f32.convert_into();
+                            hsv_f32.saturation *= 4.0;
+                            hsv_f32.hue =
+                                palette::RgbHue::from_degrees(hsv_f32.hue.to_degrees() + 180.0);
+
+                            let rgb_f32: palette::rgb::Rgb<palette::encoding::Srgb, f32> =
+                                hsv_f32.convert_into();
+                            let rgb_u8: palette::rgb::Rgb<palette::encoding::Srgb, u8> =
+                                rgb_f32.into_format();
+                            pix.color = rgb_u8;
                         }
 
                         let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
