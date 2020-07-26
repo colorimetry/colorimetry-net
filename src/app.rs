@@ -17,6 +17,7 @@ pub struct App {
     context_2d: Option<CanvasRenderingContext2d>,
     canvas: Option<HtmlCanvasElement>,
     state: AppState,
+    error_log: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -35,7 +36,7 @@ pub enum Msg {
     FileLoaded(FileData),
     Files(Vec<File>),
     ImageLoaded,
-    ImageErrored,
+    ImageErrored(String),
 }
 
 impl Component for App {
@@ -50,8 +51,9 @@ impl Component for App {
 
         let link2 = link.clone();
         let image_error_closure = Closure::wrap(Box::new(move |arg| {
+            let err_str = format!("{:?}", arg);
             log::error!("{:?}", arg);
-            link2.send_message(Msg::ImageErrored);
+            link2.send_message(Msg::ImageErrored(err_str));
         }) as Box<dyn FnMut(JsValue)>);
 
         App {
@@ -64,6 +66,7 @@ impl Component for App {
             context_2d: None,
             canvas: None,
             state: AppState::Ready,
+            error_log: vec![],
         }
     }
 
@@ -99,7 +102,8 @@ impl Component for App {
                     }
                 }
             }
-            Msg::ImageErrored => {
+            Msg::ImageErrored(err_str) => {
+                self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
             Msg::FileLoaded(file_data) => {
@@ -157,12 +161,32 @@ impl Component for App {
 
                     <canvas ref={self.node_ref.clone()} />
 
+                    { self.view_errors() }
+
                 </section>
 
                 <footer class="info">
                     <p>{ "Source code " }<a href="https://github.com/strawlab/colorswitch">{ "github.com/strawlab/colorswitch" }</a></p>
                 </footer>
             </div>
+        }
+    }
+}
+
+fn render_error(err_str: &String) -> Html {
+    html! {
+        <p>{format!("ERROR: {}",err_str)}</p>
+    }
+}
+
+impl App {
+    fn view_errors(&self) -> Html {
+        if self.error_log.len() > 0 {
+            html! {
+                { for self.error_log.iter().map(render_error)}
+            }
+        } else {
+            html! {}
         }
     }
 }
