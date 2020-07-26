@@ -4,28 +4,38 @@ use js_sys::{Array, Uint8Array};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Node, Url};
-use yew::prelude::*;
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
-use yew::virtual_dom::VNode;
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
 pub struct App {
     link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
+    image_error_closure: Closure<dyn FnMut(JsValue)>,
     tasks: Vec<ReaderTask>,
     file_info: Option<FileInfo>,
+    node_ref: NodeRef,
+    context_2d: Option<CanvasRenderingContext2d>,
+    canvas: Option<HtmlCanvasElement>,
+    state: AppState,
+}
+
+#[derive(Debug)]
+pub enum AppState {
+    Ready,
+    ReadingFile,
+    DecodingImage,
 }
 
 struct FileInfo {
     file_data: FileData,
     img: HtmlImageElement,
-    node_ref: NodeRef,
 }
 
 pub enum Msg {
     FileLoaded(FileData),
     Files(Vec<File>),
     ImageLoaded,
+    ImageErrored,
 }
 
 impl Component for App {
@@ -38,11 +48,22 @@ impl Component for App {
             link2.send_message(Msg::ImageLoaded);
         }) as Box<dyn FnMut(JsValue)>);
 
+        let link2 = link.clone();
+        let image_error_closure = Closure::wrap(Box::new(move |arg| {
+            log::error!("{:?}", arg);
+            link2.send_message(Msg::ImageErrored);
+        }) as Box<dyn FnMut(JsValue)>);
+
         App {
             link,
             image_loaded_closure,
+            image_error_closure,
             tasks: vec![],
+            node_ref: NodeRef::default(),
             file_info: None,
+            context_2d: None,
+            canvas: None,
+            state: AppState::Ready,
         }
     }
 
@@ -50,12 +71,39 @@ impl Component for App {
         false
     }
 
+    fn rendered(&mut self, _first_render: bool) {
+        // Once rendered, store references for the canvas and 2D context. These can be used for
+        // resizing the rendering area when the window or canvas element are resized.
+
+        let canvas = self.node_ref.cast::<HtmlCanvasElement>().unwrap();
+
+        let context_2d = CanvasRenderingContext2d::from(JsValue::from(
+            canvas.get_context("2d").unwrap().unwrap(),
+        ));
+
+        self.canvas = Some(canvas);
+        self.context_2d = Some(context_2d);
+    }
+
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::ImageLoaded => {
-                // We have this just for the side effect of rendering again.
+                self.state = AppState::Ready;
+
+                // The image has finished loading (decoding).
+
+                if let Some(ctx) = self.context_2d.as_ref() {
+                    if let Some(file_info) = self.file_info.as_ref() {
+                        ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
+                            .unwrap();
+                    }
+                }
+            }
+            Msg::ImageErrored => {
+                self.state = AppState::Ready;
             }
             Msg::FileLoaded(file_data) => {
+                self.state = AppState::DecodingImage;
                 let buffer = Uint8Array::from(file_data.content.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
                 let parts = Array::new_with_length(1);
@@ -65,17 +113,15 @@ impl Component for App {
 
                 img.set_onload(Some(self.image_loaded_closure.as_ref().unchecked_ref()));
 
+                img.set_onerror(Some(self.image_error_closure.as_ref().unchecked_ref()));
+
                 img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
 
-                let node_ref = NodeRef::default();
-
-                self.file_info = Some(FileInfo {
-                    file_data,
-                    node_ref,
-                    img,
-                });
+                self.file_info = Some(FileInfo { file_data, img });
             }
             Msg::Files(files) => {
+                self.state = AppState::ReadingFile;
+
                 for file in files.into_iter() {
                     let task = {
                         let callback = self.link.callback(Msg::FileLoaded);
@@ -93,6 +139,7 @@ impl Component for App {
             <div class="colorswitch-wrapper">
                 <section class="main">
                     <div>
+                        <p>{format!("State: {:?}", self.state)}</p>
                         <p>{"Choose an image file to colorswitch."}</p>
                         <input type="file" onchange=self.link.callback(move |value| {
                                 let mut result = Vec::new();
@@ -108,7 +155,7 @@ impl Component for App {
                             })/>
                     </div>
 
-                    { self.view_file() }
+                    <canvas ref={self.node_ref.clone()} />
 
                 </section>
 
@@ -116,37 +163,6 @@ impl Component for App {
                     <p>{ "Source code " }<a href="https://github.com/strawlab/colorswitch">{ "github.com/strawlab/colorswitch" }</a></p>
                 </footer>
             </div>
-        }
-    }
-}
-
-impl App {
-    fn view_file(&self) -> Html {
-        if let Some(file_info) = self.file_info.as_ref() {
-            log::info!("view 1");
-            if let Some(canvas) = file_info.node_ref.cast::<HtmlCanvasElement>() {
-                log::info!("view 2");
-
-                let ctx = CanvasRenderingContext2d::from(JsValue::from(
-                    canvas.get_context("2d").unwrap().unwrap(),
-                ));
-
-                log::info!(
-                    "{}: {}x{}",
-                    file_info.file_data.name,
-                    file_info.img.width(),
-                    file_info.img.height()
-                );
-
-                ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
-                    .unwrap();
-            }
-
-            html! {
-                <canvas ref={file_info.node_ref.clone()} />
-            }
-        } else {
-            html! {}
         }
     }
 }
