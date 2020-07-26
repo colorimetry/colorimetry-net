@@ -1,9 +1,9 @@
 // See https://github.com/AvraamMavridis/wasm-image-to-black-white
 
 use js_sys::{Array, Uint8Array};
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Node, Url};
+use wasm_bindgen::{closure::Closure, JsValue};
+use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Url};
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
@@ -26,7 +26,7 @@ pub enum AppState {
     DecodingImage(FileInfo),
 }
 
-struct FileInfo {
+pub struct FileInfo {
     file_data: FileData,
     img: HtmlImageElement,
 }
@@ -54,7 +54,7 @@ impl Component for App {
             let err_str = format!("{:?}", arg);
             log::error!("{:?}", arg);
             link2.send_message(Msg::ImageErrored(err_str));
-        }) as Box<dyn FnMut(JsValue)>);
+        }) as Box<dyn FnMut(_)>);
 
         App {
             link,
