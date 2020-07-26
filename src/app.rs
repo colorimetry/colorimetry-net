@@ -13,11 +13,11 @@ pub struct App {
     link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
     tasks: Vec<ReaderTask>,
-    files: Vec<FileInfo>,
+    file_info: Option<FileInfo>,
 }
 
 struct FileInfo {
-    _file_data: FileData,
+    file_data: FileData,
     img: HtmlImageElement,
     node_ref: NodeRef,
 }
@@ -42,7 +42,7 @@ impl Component for App {
             link,
             image_loaded_closure,
             tasks: vec![],
-            files: vec![],
+            file_info: None,
         }
     }
 
@@ -56,7 +56,6 @@ impl Component for App {
                 // We have this just for the side effect of rendering again.
             }
             Msg::FileLoaded(file_data) => {
-                let idx = self.files.len();
                 let buffer = Uint8Array::from(file_data.content.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
                 let parts = Array::new_with_length(1);
@@ -70,8 +69,8 @@ impl Component for App {
 
                 let node_ref = NodeRef::default();
 
-                self.files.push(FileInfo {
-                    _file_data: file_data,
+                self.file_info = Some(FileInfo {
+                    file_data,
                     node_ref,
                     img,
                 });
@@ -109,9 +108,8 @@ impl Component for App {
                             })/>
                     </div>
 
-                    <ul class="file-list">
-                        { for self.files.iter().enumerate().map(|e| self.view_file(e)) }
-                    </ul>
+                    { self.view_file() }
+
                 </section>
 
                 <footer class="info">
@@ -123,28 +121,32 @@ impl Component for App {
 }
 
 impl App {
-    fn view_file(&self, (idx, file_info): (usize, &FileInfo)) -> Html {
-        log::info!("view 1");
-        if let Some(canvas) = file_info.node_ref.cast::<HtmlCanvasElement>() {
-            log::info!("view 2");
+    fn view_file(&self) -> Html {
+        if let Some(file_info) = self.file_info.as_ref() {
+            log::info!("view 1");
+            if let Some(canvas) = file_info.node_ref.cast::<HtmlCanvasElement>() {
+                log::info!("view 2");
 
-            let ctx = CanvasRenderingContext2d::from(JsValue::from(
-                canvas.get_context("2d").unwrap().unwrap(),
-            ));
+                let ctx = CanvasRenderingContext2d::from(JsValue::from(
+                    canvas.get_context("2d").unwrap().unwrap(),
+                ));
 
-            log::info!(
-                "{}: {}x{}",
-                file_info._file_data.name,
-                file_info.img.width(),
-                file_info.img.height()
-            );
+                log::info!(
+                    "{}: {}x{}",
+                    file_info.file_data.name,
+                    file_info.img.width(),
+                    file_info.img.height()
+                );
 
-            ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
-                .unwrap();
-        }
+                ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
+                    .unwrap();
+            }
 
-        html! {
-            <canvas ref={file_info.node_ref.clone()} />
+            html! {
+                <canvas ref={file_info.node_ref.clone()} />
+            }
+        } else {
+            html! {}
         }
     }
 }
