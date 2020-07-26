@@ -20,11 +20,10 @@ pub struct App {
     error_log: Vec<String>,
 }
 
-#[derive(Debug)]
 pub enum AppState {
     Ready,
     ReadingFile,
-    DecodingImage,
+    DecodingImage(FileInfo),
 }
 
 struct FileInfo {
@@ -37,6 +36,7 @@ pub enum Msg {
     Files(Vec<File>),
     ImageLoaded,
     ImageErrored(String),
+    ClearErrors,
 }
 
 impl Component for App {
@@ -91,23 +91,25 @@ impl Component for App {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::ImageLoaded => {
-                self.state = AppState::Ready;
+                let old_state = std::mem::replace(&mut self.state, AppState::Ready);
 
-                // The image has finished loading (decoding).
-
-                if let Some(ctx) = self.context_2d.as_ref() {
-                    if let Some(file_info) = self.file_info.as_ref() {
+                if let AppState::DecodingImage(file_info) = old_state {
+                    // The image has finished loading (decoding).
+                    if let Some(ctx) = self.context_2d.as_ref() {
                         ctx.draw_image_with_html_image_element(&file_info.img, 0.0, 0.0)
                             .unwrap();
                     }
+                    self.file_info = Some(file_info);
                 }
             }
             Msg::ImageErrored(err_str) => {
                 self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
+            Msg::ClearErrors => {
+                self.error_log.clear();
+            }
             Msg::FileLoaded(file_data) => {
-                self.state = AppState::DecodingImage;
                 let buffer = Uint8Array::from(file_data.content.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
                 let parts = Array::new_with_length(1);
@@ -121,7 +123,7 @@ impl Component for App {
 
                 img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
 
-                self.file_info = Some(FileInfo { file_data, img });
+                self.state = AppState::DecodingImage(FileInfo { file_data, img });
             }
             Msg::Files(files) => {
                 self.state = AppState::ReadingFile;
@@ -139,11 +141,16 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
+        let state = match self.state {
+            AppState::Ready => "Ready",
+            AppState::ReadingFile => "Reading file",
+            AppState::DecodingImage(_) => "Decoding image",
+        };
         html! {
             <div class="colorswitch-wrapper">
                 <section class="main">
                     <div>
-                        <p>{format!("State: {:?}", self.state)}</p>
+                        <p>{ state }</p>
                         <p>{"Choose an image file to colorswitch."}</p>
                         <input type="file" onchange=self.link.callback(move |value| {
                                 let mut result = Vec::new();
@@ -159,8 +166,8 @@ impl Component for App {
                             })/>
                     </div>
 
+                    { self.view_file_info() }
                     <canvas ref={self.node_ref.clone()} />
-
                     { self.view_errors() }
 
                 </section>
@@ -180,10 +187,25 @@ fn render_error(err_str: &String) -> Html {
 }
 
 impl App {
+    fn view_file_info(&self) -> Html {
+        if let Some(file_info) = &self.file_info {
+            html! {
+                <p>{file_info.file_data.name.as_str()}</p>
+            }
+        } else {
+            html! {}
+        }
+    }
+
     fn view_errors(&self) -> Html {
         if self.error_log.len() > 0 {
             html! {
-                { for self.error_log.iter().map(render_error)}
+                <div>
+                    { for self.error_log.iter().map(render_error)}
+
+                    <button onclick=self.link.callback(|_| Msg::ClearErrors)>{"clear errors"}
+                    </button>
+                </div>
             }
         } else {
             html! {}
