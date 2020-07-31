@@ -1,5 +1,5 @@
 use js_sys::{Array, Uint8Array};
-use palette::{Pixel, Srgba};
+use palette::Pixel;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, Clamped, JsValue};
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Url};
@@ -378,8 +378,19 @@ impl App {
                 let new_data = {
                     let mut data = image_data.data();
 
-                    let color_buffer: &mut [Srgba<u8>] =
-                        Pixel::from_raw_slice_mut(data.as_mut_slice());
+                    // Technically, it is probably wrong to load as linear, as
+                    // the images are likely in sRGB colorspace. However, this
+                    // gives a better match to the results (visually inspected)
+                    // of operations with "Color Inspector 3D" by Kai Uwe
+                    // Barthel. Furthermore, apparently [it is not specified
+                    // what colorspace browsers use to draw images in the canvas
+                    // element](https://wiki.whatwg.org/wiki/CanvasColorSpace).
+
+                    let color_buffer: &mut [palette::rgb::Rgba<
+                        palette::encoding::Linear<_>,
+                        u8,
+                    >] = Pixel::from_raw_slice_mut(data.as_mut_slice());
+
                     for pix in color_buffer.iter_mut() {
                         // See
                         // https://github.com/erisir/FIJI/blob/a30ce62566b7a441bc315c8fff365b9985779b27/src-plugins/Color_Inspector_3D/src/main/java/Color_Inspector_3D.java#L4391-L4472
