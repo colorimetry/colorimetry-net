@@ -6,6 +6,9 @@ use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElemen
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
+use git_version::git_version;
+const GIT_VERSION: &str = git_version!();
+
 pub struct App {
     link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
@@ -264,6 +267,11 @@ impl Component for App {
             AppState::ReadingFile => "Reading file",
             AppState::DecodingImage(_) => "Decoding image",
         };
+        let git_rev_link = format!(
+            "https://github.com/strawlab/colorswitch/commit/{}",
+            GIT_VERSION
+        );
+
         html! {
             <div class="container">
 
@@ -294,7 +302,9 @@ impl Component for App {
                 { self.view_errors() }
 
                 <div class="info">
-                    <p>{ "Source code " }<a href="https://github.com/strawlab/colorswitch">{ "github.com/strawlab/colorswitch" }</a></p>
+                    <p>{ "Source code " }<a href="https://github.com/strawlab/colorswitch">{ "github.com/strawlab/colorswitch" }</a>{". You are using git revision "}
+                    <a href={git_rev_link}>{GIT_VERSION}</a>{"."}
+                    </p>
                 </div>
             </div>
         }
