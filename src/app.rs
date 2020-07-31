@@ -282,7 +282,7 @@ impl Component for App {
                 <div>
                     <p>{ state }</p>
                     <p>{"Choose an image file to colorswitch."}</p>
-                    <input type="file" onchange=self.link.callback(move |value| {
+                    <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
                             let mut result = Vec::new();
                             if let ChangeData::Files(files) = value {
                                 let files = js_sys::try_iter(&files)
