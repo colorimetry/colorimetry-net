@@ -272,6 +272,10 @@ impl Component for App {
             GIT_VERSION
         );
 
+        // Hmm, on iOS we do not get the original image but a lower quality
+        // version converted to JPEG:
+        // https://stackoverflow.com/q/27673102/1633026
+
         html! {
             <div class="container">
 
