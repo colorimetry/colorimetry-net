@@ -9,8 +9,6 @@ use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRende
 use git_version::git_version;
 const GIT_VERSION: &str = git_version!();
 
-const CANVAS_PAD4: u32 = 20; // keep equal to `im-canv` padding * 4
-
 pub struct App {
     link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
@@ -30,10 +28,7 @@ pub struct App {
 
 pub struct PositionInfo {
     /// the dimension of the div containing both canvases, when known
-    container_dims: Option<(i32, i32)>,
     image_dims: Option<(u32, u32)>,
-    image_canv_width: i32,
-    image_canv_height: i32,
     canv_width: i32,
     canv_height: i32,
 }
@@ -41,88 +36,20 @@ pub struct PositionInfo {
 impl PositionInfo {
     fn new() -> Self {
         Self {
-            container_dims: None,
             image_dims: None,
-            image_canv_width: 300,
-            image_canv_height: 200,
             canv_width: 300,
             canv_height: 200,
         }
-    }
-
-    fn update_inner(&mut self) {
-        if let (Some(container_dims), Some(image_dims)) = (self.container_dims, self.image_dims) {
-            log::info!(
-                "image_dims: {:?}, aspect {}",
-                image_dims,
-                image_dims.0 as f64 / image_dims.1 as f64
-            );
-            log::info!(
-                "container_dims: {:?}, aspect {}",
-                container_dims,
-                container_dims.0 as f64 / container_dims.1 as f64
-            );
-
-            // If we had canvases horizontally in line, what magnification
-            let width_ratio = (image_dims.0 * 2 + CANVAS_PAD4) as f64 / container_dims.0 as f64;
-            // If we had canvases vertically in line, what magnification
-            let height_ratio = (image_dims.1 * 2 + CANVAS_PAD4) as f64 / container_dims.1 as f64;
-
-            let image_aspect = image_dims.0 as f64 / image_dims.1 as f64;
-
-            log::info!("width_ratio {}, height_ratio {}", width_ratio, height_ratio);
-
-            if width_ratio > height_ratio {
-                // maximize width
-                self.canv_width = container_dims.0 - CANVAS_PAD4 as i32 / 2;
-                self.canv_height = (self.canv_width as f64 / image_aspect) as i32;
-            } else {
-                // maximize height
-                self.canv_height = container_dims.1 - CANVAS_PAD4 as i32 / 2;
-                self.canv_width = (self.canv_height as f64 * image_aspect) as i32;
-            }
-
-            log::info!(
-                "canv width {}, height {}, aspect {}",
-                self.canv_width,
-                self.canv_height,
-                self.canv_width as f64 / self.canv_height as f64,
-            );
-
-            self.image_canv_width = self.canv_width;
-            self.image_canv_height = self.canv_height;
-        }
-    }
-
-    /// The div that contains the image canvases has changed size.
-    fn set_container_size(&mut self, w: i32, h: i32) -> bool {
-        let new_size = Some((w, h));
-        let recompute_canvas = if new_size == self.container_dims {
-            false // recomputing canvas contents is not required
-        } else {
-            log::info!("new container size: {}x{}", w, h);
-            self.container_dims = new_size;
-            true // recomputing canvas contents is required
-        };
-        self.update_inner();
-        recompute_canvas
     }
 
     /// An image has been loaded, recalculate various sizing info.
     fn update_for_image(&mut self, img: &HtmlImageElement) {
         log::info!("got image size {}x{}", img.width(), img.height());
         self.image_dims = Some((img.width(), img.height()));
-        self.update_inner();
+        self.canv_width = img.width() as i32;
+        self.canv_height = img.height() as i32;
     }
 
-    /// The width of the images in the canvas (canvas coords)
-    fn image_canv_width(&self) -> i32 {
-        self.image_canv_width
-    }
-    /// The height of the images in the canvas (canvas coords)
-    fn image_canv_height(&self) -> i32 {
-        self.image_canv_height
-    }
     /// The width of the canvas (canvas coords)
     fn canv_width(&self) -> i32 {
         self.canv_width
@@ -195,19 +122,7 @@ impl Component for App {
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
 
-        let document = yew::utils::document();
-        let div_wrapper: web_sys::Element = document
-            .query_selector("#colorswitch-canvas-div")
-            .unwrap()
-            .unwrap();
-
-        // Get inner dimensions of div containing canvases.
-        let div_w = div_wrapper.client_width();
-        let div_h = div_wrapper.client_height();
-
-        if self.position_info.set_container_size(div_w, div_h) {
-            self.update_canvas_contents();
-        }
+        self.update_canvas_contents();
 
         let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
@@ -384,8 +299,8 @@ impl App {
                     &file_info.img,
                     0.0,
                     0.0,
-                    self.position_info.image_canv_width() as f64,
-                    self.position_info.image_canv_height() as f64,
+                    self.position_info.canv_width() as f64,
+                    self.position_info.canv_height() as f64,
                 )
                 .unwrap();
 
@@ -394,15 +309,15 @@ impl App {
                     .get_image_data(
                         0.0,
                         0.0,
-                        self.position_info.image_canv_width() as f64,
-                        self.position_info.image_canv_height() as f64,
+                        self.position_info.canv_width() as f64,
+                        self.position_info.canv_height() as f64,
                     )
                     .unwrap();
 
                 let w = image_data.width();
                 let h = image_data.height();
-                debug_assert!(w as i32 == self.position_info.image_canv_width());
-                debug_assert!(h as i32 == self.position_info.image_canv_height());
+                debug_assert!(w as i32 == self.position_info.canv_width());
+                debug_assert!(h as i32 == self.position_info.canv_height());
 
                 let new_data = {
                     let mut data = image_data.data();
