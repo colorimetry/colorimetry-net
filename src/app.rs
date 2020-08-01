@@ -253,9 +253,9 @@ impl Component for App {
     }
 }
 
-fn render_error(err_str: &String) -> Html {
+fn render_error(err_str: &str) -> Html {
     html! {
-        <p>{format!("ERROR: {}",err_str)}</p>
+        <p>{format!("ERROR: {}", err_str)}</p>
     }
 }
 
@@ -271,14 +271,14 @@ impl App {
     }
 
     fn view_errors(&self) -> Html {
-        if self.error_log.len() > 0 {
+        if self.error_log.is_empty() {
+            html! {}
+        } else {
             html! {
                 <div>
-                    { for self.error_log.iter().map(render_error)}
+                    { for self.error_log.iter().map(String::as_str).map(render_error)}
                 </div>
             }
-        } else {
-            html! {}
         }
     }
 
