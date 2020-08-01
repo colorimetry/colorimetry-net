@@ -27,10 +27,8 @@ pub struct App {
 }
 
 pub struct PositionInfo {
-    container_dims: Option<(i32, i32)>,
+    /// the dimension of the div containing both canvases, when known
     image_dims: Option<(u32, u32)>,
-    image_canv_width: i32,
-    image_canv_height: i32,
     canv_width: i32,
     canv_height: i32,
 }
@@ -38,75 +36,25 @@ pub struct PositionInfo {
 impl PositionInfo {
     fn new() -> Self {
         Self {
-            container_dims: None,
             image_dims: None,
-            image_canv_width: 300,
-            image_canv_height: 200,
             canv_width: 300,
             canv_height: 200,
         }
     }
 
-    fn update_inner(&mut self) {
-        if let (Some(container_dims), Some(image_dims)) = (self.container_dims, self.image_dims) {
-            // log::info!("image_dims: {:?}", image_dims);
-            // log::info!("container_dims: {:?}", container_dims);
-            let pad = 20;
-            let width_ratio = (image_dims.0 * 2 + pad) as f64 / container_dims.0 as f64;
-            let height_ratio = (image_dims.1 * 2 + pad) as f64 / container_dims.1 as f64;
-
-            let image_aspect = image_dims.0 as f64 / image_dims.1 as f64;
-
-            // log::info!("width_ratio {}, height_ratio {}", width_ratio, height_ratio);
-
-            if width_ratio > height_ratio {
-                // maximize width
-                self.canv_width = container_dims.0 - pad as i32 / 2;
-                self.canv_height = (self.canv_width as f64 / image_aspect) as i32;
-            } else {
-                // maximize height
-                self.canv_height = container_dims.1 - pad as i32 / 2;
-                self.canv_width = (self.canv_height as f64 * image_aspect) as i32;
-            }
-            self.image_canv_width = self.canv_width;
-            self.image_canv_height = self.canv_height;
-        }
-    }
-
-    /// The div that contains the image canvases has changed size.
-    fn set_container_size(&mut self, w: i32, h: i32) -> bool {
-        let new_size = Some((w, h));
-        let recompute_canvas = if new_size == self.container_dims {
-            false // recomputing canvas contents is not required
-        } else {
-            // log::info!("new container size: {}x{}", w, h);
-            self.container_dims = Some((w, h));
-            true // recomputing canvas contents is required
-        };
-        self.update_inner();
-        recompute_canvas
-    }
-
     /// An image has been loaded, recalculate various sizing info.
     fn update_for_image(&mut self, img: &HtmlImageElement) {
-        // log::info!("got image size");
+        log::info!("got image size {}x{}", img.width(), img.height());
         self.image_dims = Some((img.width(), img.height()));
-        self.update_inner();
+        self.canv_width = img.width() as i32;
+        self.canv_height = img.height() as i32;
     }
 
-    /// The width of the images in the canvas.
-    fn image_canv_width(&self) -> i32 {
-        self.image_canv_width
-    }
-    /// The height of the images in the canvas.
-    fn image_canv_height(&self) -> i32 {
-        self.image_canv_height
-    }
-    /// The width of the canvas.
+    /// The width of the canvas (canvas coords)
     fn canv_width(&self) -> i32 {
         self.canv_width
     }
-    /// The height of the canvas.
+    /// The height of the canvas (canvas coords)
     fn canv_height(&self) -> i32 {
         self.canv_height
     }
@@ -174,19 +122,7 @@ impl Component for App {
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
 
-        let document = yew::utils::document();
-        let div_wrapper: web_sys::Element = document
-            .query_selector("#colorswitch-canvas-div")
-            .unwrap()
-            .unwrap();
-
-        // Get inner dimensions of div containing canvases.
-        let div_w = div_wrapper.client_width();
-        let div_h = div_wrapper.client_height();
-
-        if self.position_info.set_container_size(div_w, div_h) {
-            self.update_canvas_contents();
-        }
+        self.update_canvas_contents();
 
         let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
@@ -272,13 +208,19 @@ impl Component for App {
             GIT_VERSION
         );
 
+        log::info!("updating canvas DOM");
+
+        // Hmm, on iOS we do not get the original image but a lower quality
+        // version converted to JPEG:
+        // https://stackoverflow.com/q/27673102/1633026
+
         html! {
             <div class="container">
 
                 <div>
                     <p>{ state }</p>
                     <p>{"Choose an image file to colorswitch."}</p>
-                    <input type="file" onchange=self.link.callback(move |value| {
+                    <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
                             let mut result = Vec::new();
                             if let ChangeData::Files(files) = value {
                                 let files = js_sys::try_iter(&files)
@@ -311,9 +253,9 @@ impl Component for App {
     }
 }
 
-fn render_error(err_str: &String) -> Html {
+fn render_error(err_str: &str) -> Html {
     html! {
-        <p>{format!("ERROR: {}",err_str)}</p>
+        <p>{format!("ERROR: {}", err_str)}</p>
     }
 }
 
@@ -329,14 +271,14 @@ impl App {
     }
 
     fn view_errors(&self) -> Html {
-        if self.error_log.len() > 0 {
+        if self.error_log.is_empty() {
+            html! {}
+        } else {
             html! {
                 <div>
-                    { for self.error_log.iter().map(render_error)}
+                    { for self.error_log.iter().map(String::as_str).map(render_error)}
                 </div>
             }
-        } else {
-            html! {}
         }
     }
 
@@ -350,13 +292,15 @@ impl App {
             if let (Some(ctx1), Some(ctx2)) =
                 (self.c1_context_2d.as_ref(), self.c2_context_2d.as_ref())
             {
+                log::info!("drawing canvas images");
+
                 // Draw the original image on the canvas.
                 ctx1.draw_image_with_html_image_element_and_dw_and_dh(
                     &file_info.img,
                     0.0,
                     0.0,
-                    self.position_info.image_canv_width() as f64,
-                    self.position_info.image_canv_height() as f64,
+                    self.position_info.canv_width() as f64,
+                    self.position_info.canv_height() as f64,
                 )
                 .unwrap();
 
@@ -365,15 +309,15 @@ impl App {
                     .get_image_data(
                         0.0,
                         0.0,
-                        self.position_info.image_canv_width() as f64,
-                        self.position_info.image_canv_height() as f64,
+                        self.position_info.canv_width() as f64,
+                        self.position_info.canv_height() as f64,
                     )
                     .unwrap();
 
                 let w = image_data.width();
                 let h = image_data.height();
-                debug_assert!(w as i32 == self.position_info.image_canv_width());
-                debug_assert!(h as i32 == self.position_info.image_canv_height());
+                debug_assert!(w as i32 == self.position_info.canv_width());
+                debug_assert!(h as i32 == self.position_info.canv_height());
 
                 let new_data = {
                     let mut data = image_data.data();
@@ -414,14 +358,12 @@ impl App {
                         pix.color = rgb_u8;
                     }
 
-                    let new_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+                    web_sys::ImageData::new_with_u8_clamped_array_and_sh(
                         Clamped(data.as_mut_slice()),
                         w,
                         h,
                     )
-                    .unwrap();
-
-                    new_data
+                    .unwrap()
                 };
                 ctx2.put_image_data(&new_data, 0.0, 0.0).unwrap();
             }

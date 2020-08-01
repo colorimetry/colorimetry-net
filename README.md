@@ -2,6 +2,10 @@
 
 ## About
 
+This app is based on the [Yew framework](https://yew.rs/docs/) and the source
+code repository was forked from the [Yew Webpack
+Template](https://github.com/yewstack/yew-wasm-pack-template).
+
 ## 🚴 Usage
 
 ### 🛠️ Build
