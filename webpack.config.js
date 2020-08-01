@@ -13,8 +13,8 @@ module.exports = (env, argv) => {
     entry: './bootstrap.js',
     output: {
       path: distPath,
-      filename: "colorswitch.js",
-      webassemblyModuleFilename: "colorswitch.wasm"
+      filename: "colorimetry-net.js",
+      webassemblyModuleFilename: "colorimetry-net.wasm"
     },
     module: {
       rules: [
