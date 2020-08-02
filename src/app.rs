@@ -198,17 +198,15 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
-        let state = match self.state {
-            AppState::Ready => "Ready",
-            AppState::ReadingFile => "Reading file",
-            AppState::DecodingImage(_) => "Decoding image",
+        let (state, spinner_div_class) = match self.state {
+            AppState::Ready => ("Ready", "display-none"),
+            AppState::ReadingFile => ("Reading file", "compute-modal"),
+            AppState::DecodingImage(_) => ("Decoding image", "compute-modal"),
         };
         let git_rev_link = format!(
             "https://github.com/colorimetry/colorimetry-net/commit/{}",
             GIT_VERSION
         );
-
-        log::info!("updating canvas DOM");
 
         // Hmm, on iOS we do not get the original image but a lower quality
         // version converted to JPEG:
@@ -216,11 +214,19 @@ impl Component for App {
 
         html! {
             <div class="container">
-
+                <div class=(spinner_div_class),>
+                    <div class="compute-modal-inner",>
+                        <p>
+                            {state}
+                        </p>
+                        <div class="lds-ellipsis",>
+                            <div></div><div></div><div></div><div></div>
+                        </div>
+                    </div>
+                </div>
                 <h1>{"🧪colorimetry.net👩‍🔬"}</h1>
 
                 <div>
-                    <p>{ state }</p>
                     <p>{"Choose an image file."}</p>
                     <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
                             let mut result = Vec::new();
