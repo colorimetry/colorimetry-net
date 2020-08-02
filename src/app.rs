@@ -198,17 +198,15 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
-        let state = match self.state {
-            AppState::Ready => "Ready",
-            AppState::ReadingFile => "Reading file",
-            AppState::DecodingImage(_) => "Decoding image",
+        let (state, spinner_div_class) = match self.state {
+            AppState::Ready => ("Ready", "display-none"),
+            AppState::ReadingFile => ("Reading file", "compute-modal"),
+            AppState::DecodingImage(_) => ("Decoding image", "compute-modal"),
         };
         let git_rev_link = format!(
             "https://github.com/colorimetry/colorimetry-net/commit/{}",
             GIT_VERSION
         );
-
-        log::info!("updating canvas DOM");
 
         // Hmm, on iOS we do not get the original image but a lower quality
         // version converted to JPEG:
@@ -216,10 +214,20 @@ impl Component for App {
 
         html! {
             <div class="container">
+                <div class=(spinner_div_class),>
+                    <div class="compute-modal-inner",>
+                        <p>
+                            {state}
+                        </p>
+                        <div class="lds-ellipsis",>
+                            <div></div><div></div><div></div><div></div>
+                        </div>
+                    </div>
+                </div>
+                <h1>{"🧪colorimetry.net👩‍🔬"}</h1>
 
                 <div>
-                    <p>{ state }</p>
-                    <p>{"Choose an image file."}</p>
+                    <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
                     <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
                             let mut result = Vec::new();
                             if let ChangeData::Files(files) = value {
@@ -236,6 +244,7 @@ impl Component for App {
 
                 { self.view_file_info() }
                 <div id="colorimetry-net-canvas-div">
+                    <h2><span class="stage">{"2"}</span>{"View the original and ColorSwitched image."}</h2>
                     <div id="colorimetry-net-canvas-container">
                         <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                         <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
@@ -243,8 +252,13 @@ impl Component for App {
                 </div>
                 { self.view_errors() }
 
+                // <div>
+                //     <h2><span class="stage">{"3"}</span>{"Quantify your results."}</h2>
+                //     {"To be implemented..."}
+                // </div>
+
                 <div class="info">
-                    <p>{ "Source code " }<a href="https://github.com/colorimetry/colorimetry-net">{ "github.com/colorimetry/colorimetry-net" }</a>{". You are using git revision "}
+                    <p>{ "Source code " }<a href="https://github.com/colorimetry/colorimetry-net">{ "github.com/colorimetry/colorimetry-net" }</a>{". You are using revision "}
                     <a href={git_rev_link}>{GIT_VERSION}</a>{"."}
                     </p>
                 </div>
