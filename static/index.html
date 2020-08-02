@@ -10,6 +10,9 @@
     <noscript>
         <h1>❌ Error: your browser does not support JavaScript, but this page requires it. ❌</h1>
     </noscript>
+    <script nomodule>
+        document.body.innerHTML = "<h1>❌ Error: your browser does not support JavaScript modules. ❌</h1>";
+    </script>
     <script type='text/javascript'>
         // Check if WebAssembly is supported. Code from
         // https://stackoverflow.com/questions/47879864 .
