@@ -217,6 +217,8 @@ impl Component for App {
         html! {
             <div class="container">
 
+                <h1>{"🧪colorimetry.net👩‍🔬"}</h1>
+
                 <div>
                     <p>{ state }</p>
                     <p>{"Choose an image file."}</p>
