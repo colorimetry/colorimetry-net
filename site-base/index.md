@@ -1,7 +1,9 @@
 ---
 layout: default.liquid
+title: Welcome
 ---
-## Blog!
+
+Welcome to colorimetry.net.
 
 {% for post in collections.posts.pages %}
 #### {{post.title}}
