@@ -204,7 +204,7 @@ impl Component for App {
             AppState::DecodingImage(_) => "Decoding image",
         };
         let git_rev_link = format!(
-            "https://github.com/strawlab/colorswitch/commit/{}",
+            "https://github.com/colorimetry/colorimetry-net/commit/{}",
             GIT_VERSION
         );
 
@@ -219,7 +219,7 @@ impl Component for App {
 
                 <div>
                     <p>{ state }</p>
-                    <p>{"Choose an image file to colorswitch."}</p>
+                    <p>{"Choose an image file."}</p>
                     <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
                             let mut result = Vec::new();
                             if let ChangeData::Files(files) = value {
@@ -235,8 +235,8 @@ impl Component for App {
                 </div>
 
                 { self.view_file_info() }
-                <div id="colorswitch-canvas-div">
-                    <div id="colorswitch-canvas-container">
+                <div id="colorimetry-net-canvas-div">
+                    <div id="colorimetry-net-canvas-container">
                         <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                         <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                     </div>
@@ -244,7 +244,7 @@ impl Component for App {
                 { self.view_errors() }
 
                 <div class="info">
-                    <p>{ "Source code " }<a href="https://github.com/strawlab/colorswitch">{ "github.com/strawlab/colorswitch" }</a>{". You are using git revision "}
+                    <p>{ "Source code " }<a href="https://github.com/colorimetry/colorimetry-net">{ "github.com/colorimetry/colorimetry-net" }</a>{". You are using git revision "}
                     <a href={git_rev_link}>{GIT_VERSION}</a>{"."}
                     </p>
                 </div>

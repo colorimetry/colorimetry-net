@@ -1,4 +1,4 @@
-# Colorswitch
+# colorimetry.net single page app
 
 ## About
 
