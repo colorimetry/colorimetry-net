@@ -227,7 +227,7 @@ impl Component for App {
                 <h1>{"🧪colorimetry.net👩‍🔬"}</h1>
 
                 <div>
-                    <p>{"Choose an image file."}</p>
+                    <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
                     <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
                             let mut result = Vec::new();
                             if let ChangeData::Files(files) = value {
@@ -244,12 +244,18 @@ impl Component for App {
 
                 { self.view_file_info() }
                 <div id="colorimetry-net-canvas-div">
+                    <h2><span class="stage">{"2"}</span>{"View the original and ColorSwitched image."}</h2>
                     <div id="colorimetry-net-canvas-container">
                         <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                         <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                     </div>
                 </div>
                 { self.view_errors() }
+
+                // <div>
+                //     <h2><span class="stage">{"3"}</span>{"Quantify your results."}</h2>
+                //     {"To be implemented..."}
+                // </div>
 
                 <div class="info">
                     <p>{ "Source code " }<a href="https://github.com/colorimetry/colorimetry-net">{ "github.com/colorimetry/colorimetry-net" }</a>{". You are using revision "}
