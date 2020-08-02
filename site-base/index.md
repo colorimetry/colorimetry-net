@@ -5,8 +5,4 @@ title: Welcome
 
 Welcome to colorimetry.net.
 
-{% for post in collections.posts.pages %}
-#### {{post.title}}
-
-[{{ post.title }}]({{ post.permalink }})
-{% endfor %}
+What you want is probably the <a href="/app">app</a>.
