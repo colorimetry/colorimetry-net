@@ -246,7 +246,7 @@ impl Component for App {
                 { self.view_errors() }
 
                 <div class="info">
-                    <p>{ "Source code " }<a href="https://github.com/colorimetry/colorimetry-net">{ "github.com/colorimetry/colorimetry-net" }</a>{". You are using git revision "}
+                    <p>{ "Source code " }<a href="https://github.com/colorimetry/colorimetry-net">{ "github.com/colorimetry/colorimetry-net" }</a>{". You are using revision "}
                     <a href={git_rev_link}>{GIT_VERSION}</a>{"."}
                     </p>
                 </div>
