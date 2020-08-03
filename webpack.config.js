@@ -18,7 +18,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new CopyWebpackPlugin([
-        { from: './static', to: distPath }
+        // { from: './static', to: distPath }
       ]),
       new WasmPackPlugin({
         crateDirectory: ".",
