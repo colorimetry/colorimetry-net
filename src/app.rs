@@ -213,7 +213,7 @@ impl Component for App {
         // https://stackoverflow.com/q/27673102/1633026
 
         html! {
-            <div class="container">
+            <div class="spa-container">
                 <div class=(spinner_div_class),>
                     <div class="compute-modal-inner",>
                         <p>
