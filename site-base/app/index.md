@@ -1,9 +1,7 @@
 ---
 layout: default.liquid
-title: ColorSwitch
+title: ColorSwitch App
 ---
-
-ColorSwitch App
 
 <div id="app-main">
   The app goes here.

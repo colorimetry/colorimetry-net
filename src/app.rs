@@ -224,8 +224,6 @@ impl Component for App {
                         </div>
                     </div>
                 </div>
-                <h1>{"🧪colorimetry.net👩‍🔬"}</h1>
-
                 <div>
                     <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
                     <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
