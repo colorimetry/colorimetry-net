@@ -255,7 +255,7 @@ impl Component for App {
                 //     {"To be implemented..."}
                 // </div>
 
-                <div class="info">
+                <div>
                     <p>{"You are using revision "}<a href={git_rev_link}>{GIT_VERSION}</a>{"."}</p>
                 </div>
             </div>
