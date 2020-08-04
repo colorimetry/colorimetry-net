@@ -1,10 +1,2 @@
 [build]
 environment = { YARN_FLAGS = "--frozen-lockfile" }
-
-[[redirects]]
-from = "/"
-to = "/hnb-app/"
-
-[[redirects]]
-from = ""
-to = "/hnb-app/"
