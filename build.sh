@@ -43,6 +43,9 @@ find dist
 
 cd ..
 
+# Remove debug html page for dev use
+rm -r hnb-app/dist/index.html
+
 # Put built yew in cobalt build output dir
 cp hnb-app/dist/* site-base/_site/hnb-app/
 
