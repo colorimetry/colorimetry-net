@@ -9,7 +9,7 @@ set -o errexit
 rm -rf /opt/buildhome/.yarn
 curl --silent -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.4
 ls $HOME/.yarn
-export PATH="$PATH:$HOME/.yarn"
+export PATH="$PATH:$HOME/.yarn/bin"
 
 # Install rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
