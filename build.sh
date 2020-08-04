@@ -49,8 +49,10 @@ rm -r hnb-app/dist/index.html
 # Put built yew in cobalt build output dir
 cp hnb-app/dist/* site-base/_site/hnb-app/
 
-# For now, move entire site into `dist` so netlify finds it again
+# Move entire site into `dist`
 mkdir -p dist
+# Make redirect
+echo "/ /hnb-app/" > dist/_redirects
 mv site-base/_site/* dist/
 
 # FUTURE: build yew and cobalt in their own output dirs, then put into final dir.
