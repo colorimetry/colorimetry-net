@@ -4,6 +4,16 @@ title: ColorSwitch App
 ---
 
 <div id="app-main">
+    <div class="compute-modal">
+        <div class="compute-modal-inner",>
+            <p>
+                Loading...
+            </p>
+            <div class="lds-ellipsis",>
+                <div></div><div></div><div></div><div></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <noscript>
