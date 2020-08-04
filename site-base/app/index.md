@@ -27,10 +27,9 @@ title: ColorSwitch App
         }
         return false;
     })();
-
     if (!supported) {
         document.body.innerHTML = "<h1>❌ Error: your browser does not support WebAssembly. ❌</h1>" +
             "<p>For a list of supported browsers, see <a href=\"https://caniuse.com/#search=WebAssembly\">this</a>.<p>";
     }
 </script>
-<script src="/colorimetry-net.js"></script>
+<script src="colorimetry-net.js"></script>
