@@ -53,8 +53,5 @@ cp hnb-app/dist/* site-base/_site/hnb-app/
 mkdir -p dist
 mv site-base/_site/* dist/
 
-# Tell netlify to redirect `/`` to `/hnb-app/`.
-echo "/ /hnb-app/" > dist/_redirects
-
 # FUTURE: build yew and cobalt in their own output dirs, then put into final dir.
 # Don't do that now to keep netlify working.
