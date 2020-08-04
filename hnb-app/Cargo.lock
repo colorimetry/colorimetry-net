@@ -74,24 +74,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8100e46ff92eb85bf6dc2930c73f2a4f7176393c84a9446b3d501e1b354e7b34"
 
 [[package]]
-name = "colorimetry-net"
-version = "0.0.1"
-dependencies = [
- "git-version",
- "js-sys",
- "log",
- "palette",
- "serde",
- "serde_derive",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "wasm-logger",
- "web-sys",
- "wee_alloc",
- "yew",
-]
-
-[[package]]
 name = "console_error_panic_hook"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -285,6 +267,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34f595585f103464d8d2f6e9864682d74c1601fed5e07d62b1c9058dba8246fb"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "hnb-app"
+version = "0.0.1"
+dependencies = [
+ "git-version",
+ "js-sys",
+ "log",
+ "palette",
+ "serde",
+ "serde_derive",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "wasm-logger",
+ "web-sys",
+ "wee_alloc",
+ "yew",
 ]
 
 [[package]]
