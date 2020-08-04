@@ -5,9 +5,6 @@ set -o errexit
 # from a bare netlify build image. This image seems to have yarn installed but not
 # rust.
 
-# Install webpack
-npm install --global webpack-cli webpack
-
 # Install yarn (1.22.4 is installed by default on netlify, so we keep that).
 rm -rf /opt/buildhome/.yarn
 curl --silent -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.4
@@ -34,6 +31,9 @@ cd ..
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 cd hnb-app
+
+# Let yarn install prereqs
+yarn install
 
 # Build production release using yarn, place it in dist/
 yarn run build
