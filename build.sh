@@ -9,8 +9,25 @@ set -o errexit
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source $HOME/.cargo/env
 
+# Install cobalt
+curl -L -o /tmp/cobalt.tar.gz https://github.com/cobalt-org/cobalt.rs/releases/download/v0.16.3/cobalt-v0.16.3-x86_64-unknown-linux-gnu.tar.gz
+tar xzf /tmp/cobalt.tar.gz
+mv cobalt $HOME/.cargo/bin/cobalt
+
+# Build static site with cobalt
+cd site-base
+cobalt build
+cd ..
+
 # Install wasm-pack
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-# Build production release using yarn
+# Build production release using yarn, place it in dist/
 yarn run build
+
+# Put built yew in cobalt build output dir
+mv dist/* site-base/_site
+
+# For now, move entire site into `dist` so netlify finds it again
+rmdir dist
+mv site-base/_site dist
