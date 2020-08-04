@@ -5,6 +5,9 @@ set -o errexit
 # from a bare netlify build image. This image seems to have yarn installed but not
 # rust.
 
+# Install webpack
+npm install --global webpack
+
 # Install yarn (1.22.4 is installed by default on netlify, so we keep that).
 rm -rf /opt/buildhome/.yarn
 curl --silent -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.4
