@@ -24,17 +24,21 @@ cd ..
 # Install wasm-pack
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
+cd hnb-app
+
 # Build production release using yarn, place it in dist/
-rm -rf dist/*
 yarn run build
 
 # debug: what was built for yew?
 find dist
 
+cd ..
+
 # Put built yew in cobalt build output dir
-mv dist/* site-base/_site/app/
+cp hnb-app/dist/* site-base/_site/hnb-app/
 
 # For now, move entire site into `dist` so netlify finds it again
+mkdir -p dist
 mv site-base/_site/* dist/
 
 # FUTURE: build yew and cobalt in their own output dirs, then put into final dir.
