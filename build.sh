@@ -7,7 +7,9 @@ set -o errexit
 
 # Install yarn (1.22.4 is installed by default on netlify, so we keep that).
 rm -rf /opt/buildhome/.yarn
-curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.4
+curl --silent -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.4
+ls $HOME/.yarn
+export PATH="$PATH:$HOME/.yarn"
 
 # Install rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
