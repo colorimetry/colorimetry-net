@@ -4,6 +4,9 @@ on: [push, pull_request]
 jobs:
   check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hnb-app
     steps:
       - uses: actions/checkout@v2
       - name: Setup Rust
