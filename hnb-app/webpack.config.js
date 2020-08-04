@@ -13,8 +13,8 @@ module.exports = (env, argv) => {
     entry: './bootstrap.js',
     output: {
       path: distPath,
-      filename: "colorimetry-net.js",
-      webassemblyModuleFilename: "colorimetry-net.wasm"
+      filename: "hnb-app.js",
+      webassemblyModuleFilename: "hnb-app.wasm"
     },
     plugins: [
       new CopyWebpackPlugin([

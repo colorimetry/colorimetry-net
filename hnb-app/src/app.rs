@@ -241,9 +241,9 @@ impl Component for App {
                 </div>
 
                 { self.view_file_info() }
-                <div id="colorimetry-net-canvas-div">
+                <div id="hnb-app-canvas-div">
                     <h2><span class="stage">{"2"}</span>{"View the original and ColorSwitched image."}</h2>
-                    <div id="colorimetry-net-canvas-container">
+                    <div id="hnb-app-canvas-container">
                         <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                         <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                     </div>

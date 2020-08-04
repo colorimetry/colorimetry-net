@@ -42,4 +42,4 @@ title: ColorSwitch App
             "<p>For a list of supported browsers, see <a href=\"https://caniuse.com/#search=WebAssembly\">this</a>.<p>";
     }
 </script>
-<script src="colorimetry-net.js"></script>
+<script src="hnb-app.js"></script>
