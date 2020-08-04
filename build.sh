@@ -16,6 +16,7 @@ set -o errexit
 
 # Build static site with cobalt
 cd site-base
+rm -rf _site
 cobalt build
 find _site # debug: what was built for cobalt?
 cd ..
@@ -24,14 +25,17 @@ cd ..
 # curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # Build production release using yarn, place it in dist/
+rm -rf dist/*
 yarn run build
 
 # debug: what was built for yew?
 find dist
 
 # Put built yew in cobalt build output dir
-mv dist/* site-base/_site
+mv dist/* site-base/_site/app/
 
 # For now, move entire site into `dist` so netlify finds it again
-rmdir dist
-mv site-base/_site dist
+mv site-base/_site/* dist/
+
+# FUTURE: build yew and cobalt in their own output dirs, then put into final dir.
+# Don't do that now to keep netlify working.
