@@ -25,6 +25,11 @@ body {
   margin: 10px;
 }
 
+.drag-and-drop {
+  border: 2px solid $accent-color;
+  padding: 2em;
+}
+
 .compute-modal {
   background-color: rgba(0, 0, 0, 0.5);
   position: fixed;
