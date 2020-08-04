@@ -5,14 +5,14 @@ set -o errexit
 # from a bare netlify build image. This image seems to have yarn installed but not
 # rust.
 
-# # Install rust
-# curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-# source $HOME/.cargo/env
+# Install rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source $HOME/.cargo/env
 
-# # Install cobalt
-# curl --silent -L -o /tmp/cobalt.tar.gz https://github.com/cobalt-org/cobalt.rs/releases/download/v0.16.3/cobalt-v0.16.3-x86_64-unknown-linux-gnu.tar.gz
-# tar xzf /tmp/cobalt.tar.gz
-# mv cobalt $HOME/.cargo/bin/cobalt
+# Install cobalt
+curl --silent -L -o /tmp/cobalt.tar.gz https://github.com/cobalt-org/cobalt.rs/releases/download/v0.16.3/cobalt-v0.16.3-x86_64-unknown-linux-gnu.tar.gz
+tar xzf /tmp/cobalt.tar.gz
+mv cobalt $HOME/.cargo/bin/cobalt
 
 # Build static site with cobalt
 cd site-base
@@ -21,8 +21,8 @@ cobalt build
 find _site # debug: what was built for cobalt?
 cd ..
 
-# # Install wasm-pack
-# curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+# Install wasm-pack
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # Build production release using yarn, place it in dist/
 rm -rf dist/*
