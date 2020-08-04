@@ -6,7 +6,7 @@ set -o errexit
 # rust.
 
 # Install webpack
-npm install --global webpack
+npm install --global webpack-cli webpack
 
 # Install yarn (1.22.4 is installed by default on netlify, so we keep that).
 rm -rf /opt/buildhome/.yarn
