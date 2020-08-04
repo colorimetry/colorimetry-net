@@ -5,6 +5,11 @@ set -o errexit
 # from a bare netlify build image. This image seems to have yarn installed but not
 # rust.
 
+# Install yarn (Ubuntu 16.04)
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+sudo apt-get -y update && sudo apt-get -y install yarn
+
 # Install rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source $HOME/.cargo/env
