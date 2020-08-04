@@ -1,7 +1,9 @@
 ---
 layout: default.liquid
-title: ColorSwitch App
+title: ColorSwitch HNB
 ---
+
+Automatic image enhancement for Hydroxy naphthol blue (HNB) dyes.
 
 <div id="app-main">
     <div class="compute-modal">
