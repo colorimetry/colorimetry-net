@@ -2,7 +2,9 @@ use js_sys::{Array, Uint8Array};
 use palette::Pixel;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, Clamped, JsValue};
-use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement, Url};
+use web_sys::{
+    Blob, CanvasRenderingContext2d, DragEvent, HtmlCanvasElement, HtmlImageElement, Url,
+};
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
@@ -76,6 +78,7 @@ pub enum Msg {
     Files(Vec<File>),
     ImageLoaded,
     ImageErrored(String),
+    Nop,
 }
 
 impl Component for App {
@@ -193,11 +196,34 @@ impl Component for App {
                     self.tasks.push(task);
                 }
             }
+            Msg::Nop => return false,
         }
         true
     }
 
     fn view(&self) -> Html {
+        let ondragover = self.link.callback(|e: DragEvent| {
+            // prevent default to allow drop
+            e.prevent_default();
+            Msg::Nop
+        });
+
+        let ondrop = self.link.callback(|e: DragEvent| {
+            e.prevent_default();
+
+            if let Some(ft) = e.data_transfer() {
+                return Msg::Files(
+                    js_sys::try_iter(&ft.files().unwrap())
+                        .unwrap()
+                        .unwrap()
+                        .map(|v| File::from(v.unwrap()))
+                        .collect(),
+                );
+            }
+
+            Msg::Nop
+        });
+
         let (state, spinner_div_class) = match self.state {
             AppState::Ready => ("Ready", "display-none"),
             AppState::ReadingFile => ("Reading file", "compute-modal"),
@@ -226,18 +252,21 @@ impl Component for App {
                 </div>
                 <div>
                     <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
-                    <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
-                            let mut result = Vec::new();
-                            if let ChangeData::Files(files) = value {
-                                let files = js_sys::try_iter(&files)
-                                    .unwrap()
-                                    .unwrap()
-                                    .into_iter()
-                                    .map(|v| File::from(v.unwrap()));
-                                result.extend(files);
-                            }
-                            Msg::Files(result)
-                        })/>
+                    <div class="drag-and-drop" ondrop=ondrop ondragover=ondragover>
+                        {"Drag a file here or select an image "}
+                        <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
+                                let mut result = Vec::new();
+                                if let ChangeData::Files(files) = value {
+                                    let files = js_sys::try_iter(&files)
+                                        .unwrap()
+                                        .unwrap()
+                                        .into_iter()
+                                        .map(|v| File::from(v.unwrap()));
+                                    result.extend(files);
+                                }
+                                Msg::Files(result)
+                            })/>
+                    </div>
                 </div>
 
                 { self.view_file_info() }
