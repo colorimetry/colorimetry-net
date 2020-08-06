@@ -1,5 +1,5 @@
 [package]
-name = "hnb-app"
+name = "autocal"
 version = "0.0.1"
 authors = ["Andrew Straw <strawman@astraw.com>"]
 edition = "2018"

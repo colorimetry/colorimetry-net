@@ -13,8 +13,8 @@ module.exports = (env, argv) => {
     entry: './bootstrap.js',
     output: {
       path: distPath,
-      filename: "hnb-app.js",
-      webassemblyModuleFilename: "hnb-app.wasm"
+      filename: "autocal.js",
+      webassemblyModuleFilename: "autocal.wasm"
     },
     plugins: [
       new CopyWebpackPlugin([

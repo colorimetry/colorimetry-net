@@ -1,7 +1,4 @@
-# hnb-app - automatic colorimetric analysis of HNB dye
-
-This directory contains the source code for [HNB
-App](https://colorimetry.net/hnb-app).
+# autocal - automatic colorimetric analysis of HNB dye
 
 ## About
 
