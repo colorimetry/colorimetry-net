@@ -30,6 +30,7 @@ version = "0.3.4"
 features = [
   'Blob',
   'CanvasRenderingContext2d',
+  'CanvasRenderingContext2d',
   'DataTransfer',
   'DragEvent',
   'HtmlCanvasElement',

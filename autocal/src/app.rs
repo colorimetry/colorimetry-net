@@ -30,8 +30,8 @@ impl PositionInfo {
     fn new() -> Self {
         Self {
             image_dims: None,
-            canv_width: 300,
-            canv_height: 200,
+            canv_width: 1024,
+            canv_height: 600,
         }
     }
 
@@ -62,6 +62,8 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        log::info!("did create");
+
         App {
             link,
             c1_node_ref: NodeRef::default(),
@@ -79,8 +81,6 @@ impl Component for App {
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
 
-        self.update_canvas_contents();
-
         let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
         let context_2d = CanvasRenderingContext2d::from(JsValue::from(
@@ -89,6 +89,10 @@ impl Component for App {
 
         self.c1_canvas = Some(canvas);
         self.c1_context_2d = Some(context_2d);
+
+        log::info!("did render");
+        self.update_canvas_contents();
+        log::info!("did update canvase in render");
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -117,11 +121,76 @@ impl Component for App {
     }
 }
 
+fn draw_cal_spot(ctx: &CanvasRenderingContext2d, x: f64, y: f64, w: f64, h: f64) {
+    let n_steps = 6;
+    let x_step = w / (n_steps as f64 + 2.0);
+    let y_step = h / (n_steps as f64 + 2.0);
+    let c_step = 255.0 / (n_steps as f64);
+    let halfdot = 1.0;
+
+    for i in 0..2 {
+        for j in 0..2 {
+            let color = "rgb(0, 0, 0)";
+            ctx.set_fill_style(&color.into());
+            ctx.fill_rect(
+                (j * (n_steps + 1)) as f64 * x_step + 0.5 * x_step - halfdot + x,
+                (i * (n_steps + 1)) as f64 * y_step + 0.5 * y_step - halfdot + y,
+                2.0 * halfdot,
+                2.0 * halfdot,
+            );
+        }
+    }
+
+    for i in 0..6 {
+        for j in 0..6 {
+            let color = format!("rgb(0, {}, {})", i as f64 * c_step, j as f64 * c_step,);
+            // log::info!("{},{}: {}", i, j, color);
+            ctx.set_fill_style(&color.into());
+            ctx.fill_rect(
+                (j + 1) as f64 * x_step + x,
+                (i + 1) as f64 * y_step + y,
+                x_step,
+                y_step,
+            );
+        }
+    }
+}
+
 impl App {
     /// Redraw the canvas
     fn update_canvas_contents(&self) {
         if let Some(ctx1) = self.c1_context_2d.as_ref() {
             log::info!("drawing canvas images");
+
+            let xsize = 50.0;
+            let ysize = 100.0;
+
+            draw_cal_spot(ctx1, 0.0, 0.0, xsize, ysize);
+
+            draw_cal_spot(
+                ctx1,
+                self.position_info.canv_width() as f64 - xsize,
+                0.0,
+                xsize,
+                ysize,
+            );
+
+            draw_cal_spot(
+                ctx1,
+                0.0,
+                self.position_info.canv_height() as f64 - ysize,
+                xsize,
+                ysize,
+            );
+
+            draw_cal_spot(
+                ctx1,
+                self.position_info.canv_width() as f64 - xsize,
+                self.position_info.canv_height() as f64 - ysize,
+                xsize,
+                ysize,
+            );
+            log::info!("did draw spots");
 
             // Draw the original image on the canvas.
             // ctx1.draw_image_with_html_image_element_and_dw_and_dh(

@@ -125,8 +125,6 @@ impl Component for App {
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
 
-        self.update_canvas_contents();
-
         let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
         let context_2d = CanvasRenderingContext2d::from(JsValue::from(
@@ -144,6 +142,8 @@ impl Component for App {
 
         self.c2_canvas = Some(canvas);
         self.c2_context_2d = Some(context_2d);
+
+        self.update_canvas_contents();
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
