@@ -240,6 +240,15 @@ impl Component for App {
 
         html! {
             <div class="spa-container">
+                <div>
+                    <p>{"This page allows you to \"Color Switch\" an image. This means \
+                    that, in a Hue-Saturation-Lightness colorspace, the color of each pixel will be \
+                    increased 4x in saturation and rotated 180 degrees in Hue. "}
+                    <a href="https://doi.org/10.1101/2020.06.23.166397 ">{"Kellner et al. (2020)"}</a>
+                    {" found that this increases the perceptual ability to distinguish positive vs \
+                    negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
+                    HNB (Hydroxy naphthol blue) dye."}</p>
+                </div>
                 <div class=(spinner_div_class),>
                     <div class="compute-modal-inner",>
                         <p>
