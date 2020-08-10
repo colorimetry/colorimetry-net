@@ -1,18 +1,21 @@
 use palette::Pixel;
 
+/// Perform a 4x saturation and 180 degree rotation of colors.
+///
+/// Operates on raw pixel buffer.
+///
+/// I learned, via discussion with the authors of Kellner et al. 2020 that, to
+/// perform the "colorswitch" operation manually, they open the image in FIJI,
+/// opened "Plugins -> Color Inspector 3D" then used the slider to set "Color
+/// Rotation" equal to 180 degrees. In a later addition to the procedure, they
+/// additionally set the "Saturation" slider to 4.0. I have done this
+/// transformation myself on test images and compared the results. Additionally,
+/// I inspected the source code of the Color Inspector 3D plugin by Barthel.
+/// Based on these investigations, I wrote the below transformation.
 pub fn saturate_and_rotate(data: &mut [u8]) {
-    // I learned, via discussion with the authors of Kellner et al. 2020 that,
-    // to perform the "colorswitch" operation manually, they open the image in
-    // FIJI, opened "Plugins -> Color Inspector 3D" then used the slider to set
-    // "Color Rotation" equal to 180 degrees. In a later addition to the
-    // procedure, they additionally set the "Saturation" slider to 4.0. I have
-    // done this transformation myself on test images and compared the results.
-    // Additionally, I inspected the source code of the Color Inspector 3D
-    // plugin by Barthel. Based on these investigations, I wrote the below
-    // transformation.
 
-    // Technically, it is probably wrong to load as linear, as the images are
-    // likely in sRGB colorspace. However, this gives a better match to the
+    // Technically, it is probably wrong to load the data as linear, as the
+    // images are probably in sRGB. However, this gives a better match to the
     // results (visually inspected) of operations with "Color Inspector 3D" by
     // Kai Uwe Barthel.
 
