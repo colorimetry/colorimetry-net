@@ -13,7 +13,6 @@ use palette::Pixel;
 /// I inspected the source code of the Color Inspector 3D plugin by Barthel.
 /// Based on these investigations, I wrote the below transformation.
 pub fn saturate_and_rotate(data: &mut [u8]) {
-
     // Technically, it is probably wrong to load the data as linear, as the
     // images are probably in sRGB. However, this gives a better match to the
     // results (visually inspected) of operations with "Color Inspector 3D" by
@@ -23,10 +22,8 @@ pub fn saturate_and_rotate(data: &mut [u8]) {
     // images in the canvas
     // element](https://wiki.whatwg.org/wiki/CanvasColorSpace).
 
-    let color_buffer: &mut [palette::rgb::Rgba<
-        palette::encoding::Linear<_>,
-        u8,
-    >] = Pixel::from_raw_slice_mut(data);
+    let color_buffer: &mut [palette::rgb::Rgba<palette::encoding::Linear<_>, u8>] =
+        Pixel::from_raw_slice_mut(data);
 
     for pix in color_buffer.iter_mut() {
         // See
@@ -36,11 +33,9 @@ pub fn saturate_and_rotate(data: &mut [u8]) {
         let rgb_f32: palette::rgb::Rgb<_, f32> = rgb.into_format();
 
         use palette::ConvertInto;
-        let mut hsl_f32: palette::Hsl<palette::encoding::Srgb, f32> =
-            rgb_f32.convert_into();
+        let mut hsl_f32: palette::Hsl<palette::encoding::Srgb, f32> = rgb_f32.convert_into();
 
-        hsl_f32.hue =
-            palette::RgbHue::from_degrees(hsl_f32.hue.to_degrees() + 180.0);
+        hsl_f32.hue = palette::RgbHue::from_degrees(hsl_f32.hue.to_degrees() + 180.0);
 
         hsl_f32.saturation *= 4.0;
 

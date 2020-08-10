@@ -1,7 +1,7 @@
 #![recursion_limit = "512"]
 
-mod transform_colors;
 mod app;
+mod transform_colors;
 
 use wasm_bindgen::prelude::*;
 
