@@ -38,10 +38,8 @@ pub fn transform_colors(data: &mut [u8]) {
 
         hsl_f32.hue =
             palette::RgbHue::from_degrees(hsl_f32.hue.to_degrees() + 180.0);
-        // hsl_f32.clamp_self();
 
         hsl_f32.saturation *= 4.0;
-        // hsl_f32.clamp_self();
 
         let rgb_f32: palette::rgb::Rgb<_, f32> = hsl_f32.convert_into();
         let rgb_u8: palette::rgb::Rgb<_, u8> = rgb_f32.into_format();
