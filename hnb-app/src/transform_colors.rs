@@ -1,12 +1,23 @@
 use palette::Pixel;
 
 pub fn transform_colors(data: &mut [u8]) {
-    // Technically, it is probably wrong to load as linear, as
-    // the images are likely in sRGB colorspace. However, this
-    // gives a better match to the results (visually inspected)
-    // of operations with "Color Inspector 3D" by Kai Uwe
-    // Barthel. Furthermore, apparently [it is not specified
-    // what colorspace browsers use to draw images in the canvas
+    // I learned, via discussion with the authors of Kellner et al. 2020 that,
+    // to perform the "colorswitch" operation manually, they open the image in
+    // FIJI, opened "Plugins -> Color Inspector 3D" then used the slider to set
+    // "Color Rotation" equal to 180 degrees. In a later addition to the
+    // procedure, they additionally set the "Saturation" slider to 4.0. I have
+    // done this transformation myself on test images and compared the results.
+    // Additionally, I inspected the source code of the Color Inspector 3D
+    // plugin by Barthel. Based on these investigations, I wrote the below
+    // transformation.
+
+    // Technically, it is probably wrong to load as linear, as the images are
+    // likely in sRGB colorspace. However, this gives a better match to the
+    // results (visually inspected) of operations with "Color Inspector 3D" by
+    // Kai Uwe Barthel.
+
+    // Apparently [it is not specified what colorspace browsers use to draw
+    // images in the canvas
     // element](https://wiki.whatwg.org/wiki/CanvasColorSpace).
 
     let color_buffer: &mut [palette::rgb::Rgba<
