@@ -369,7 +369,7 @@ impl App {
                 let new_data = {
                     let mut data = image_data.data();
 
-                    crate::transform_colors::transform_colors(data.as_mut_slice());
+                    crate::transform_colors::saturate_and_rotate(data.as_mut_slice());
 
                     web_sys::ImageData::new_with_u8_clamped_array_and_sh(
                         Clamped(data.as_mut_slice()),

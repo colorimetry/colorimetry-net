@@ -1,6 +1,6 @@
 use palette::Pixel;
 
-pub fn transform_colors(data: &mut [u8]) {
+pub fn saturate_and_rotate(data: &mut [u8]) {
     // I learned, via discussion with the authors of Kellner et al. 2020 that,
     // to perform the "colorswitch" operation manually, they open the image in
     // FIJI, opened "Plugins -> Color Inspector 3D" then used the slider to set
