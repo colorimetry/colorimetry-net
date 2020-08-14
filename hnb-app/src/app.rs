@@ -7,9 +7,6 @@ use web_sys::{
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
-use git_version::git_version;
-const GIT_VERSION: &str = git_version!();
-
 pub struct App {
     link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
@@ -228,10 +225,6 @@ impl Component for App {
             AppState::ReadingFile => ("Reading file", "compute-modal"),
             AppState::DecodingImage(_) => ("Decoding image", "compute-modal"),
         };
-        let git_rev_link = format!(
-            "https://github.com/colorimetry/colorimetry-net/commit/{}",
-            GIT_VERSION
-        );
 
         // Hmm, on iOS we do not get the original image but a lower quality
         // version converted to JPEG:
@@ -292,9 +285,6 @@ impl Component for App {
                 //     {"To be implemented..."}
                 // </div>
 
-                <div>
-                    <p>{"You are using revision "}<a href={git_rev_link}>{GIT_VERSION}</a>{"."}</p>
-                </div>
             </div>
         }
     }
