@@ -12,6 +12,7 @@ use palette::Pixel;
 /// transformation myself on test images and compared the results. Additionally,
 /// I inspected the source code of the Color Inspector 3D plugin by Barthel.
 /// Based on these investigations, I wrote the below transformation.
+#[allow(dead_code)]
 pub fn saturate_and_rotate(data: &mut [u8]) {
     // Technically, it is probably wrong to load the data as linear, as the
     // images are probably in sRGB. However, this gives a better match to the
