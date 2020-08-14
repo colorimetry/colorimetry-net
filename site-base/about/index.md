@@ -22,4 +22,4 @@ We would like to acknowledge:
 - [Github](https://github.com) for hosting our source code, running our continuous integration tests, and providing an issue tracker. <img class="about-icon" src="/images/Octocat.png" />
 - The [`colour` Python library](https://github.com/colour-science/colour/) and Slack channel for great code and discussion. <img class="about-icon" src="/images/Colour_Logo_Medium_001.png"/>
 - The scientific Python stack, including `Python`, `numpy`, `matplotlib`, `scikit-image`, `pandas`, and `Jupyter` for providing data analysis software.
-- `rust` and the `cobalt`, `yew` and `palette` libraries for providing web software.
+- `rust` and the `cobalt`, `yew` and `palette` libraries for providing web software. <img class="about-icon" src="/images/cobald.logo.02.resize.png">

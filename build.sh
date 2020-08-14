@@ -2,8 +2,7 @@
 set -o errexit
 
 # This script was written to run on netlify to build a production release starting
-# from a bare netlify build image. This image seems to have yarn installed but not
-# rust.
+# from a bare netlify build image.
 
 # Install yarn (1.22.4 is installed by default on netlify, so we keep that).
 rm -rf /opt/buildhome/.yarn
@@ -22,6 +21,10 @@ mv cobalt $HOME/.cargo/bin/cobalt
 
 # Build static site with cobalt
 cd site-base
+mkdir -p _data
+echo -n "git_rev: " > _data/metadata.yaml
+git describe --always --dirty=-modified >> _data/metadata.yaml
+cat  _data/metadata.yaml
 rm -rf _site
 cobalt build
 find _site # debug: what was built for cobalt?
