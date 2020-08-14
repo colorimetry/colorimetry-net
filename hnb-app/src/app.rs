@@ -242,9 +242,8 @@ impl Component for App {
                 <div>
                     <p>{"This page allows you to \"Color Stretch\" an image. This means \
                     that, in a Hue-Saturation-Lightness colorspace, the color of each pixel will be \
-                    increased 4x in saturation and rotated 180 degrees in Hue. "}
-                    <a href="https://doi.org/10.1101/2020.06.23.166397 ">{"Kellner et al. (2020)"}</a>
-                    {" found that this increases the perceptual ability to distinguish positive vs \
+                    stretched in hue to emphasize the colors of HNB and increased 4x in saturation. \
+                    This increases the perceptual ability to distinguish positive vs \
                     negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
                     HNB (Hydroxy naphthol blue) dye."}</p>
                 </div>
