@@ -240,7 +240,7 @@ impl Component for App {
         html! {
             <div class="spa-container">
                 <div>
-                    <p>{"This page allows you to \"Color Switch\" an image. This means \
+                    <p>{"This page allows you to \"Color Stretch\" an image. This means \
                     that, in a Hue-Saturation-Lightness colorspace, the color of each pixel will be \
                     increased 4x in saturation and rotated 180 degrees in Hue. "}
                     <a href="https://doi.org/10.1101/2020.06.23.166397 ">{"Kellner et al. (2020)"}</a>
@@ -279,7 +279,7 @@ impl Component for App {
 
                 { self.view_file_info() }
                 <div id="hnb-app-canvas-div">
-                    <h2><span class="stage">{"2"}</span>{"View the original and ColorSwitched image."}</h2>
+                    <h2><span class="stage">{"2"}</span>{"View the original and Color Stretched image."}</h2>
                     <div id="hnb-app-canvas-container">
                         <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                         <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
@@ -369,7 +369,7 @@ impl App {
                 let new_data = {
                     let mut data = image_data.data();
 
-                    crate::transform_colors::saturate_and_rotate(data.as_mut_slice());
+                    crate::transform_colors::color_stretch(data.as_mut_slice());
 
                     web_sys::ImageData::new_with_u8_clamped_array_and_sh(
                         Clamped(data.as_mut_slice()),
