@@ -1,6 +1,6 @@
 ---
 layout: default.liquid
-title: ColorSwitch HNB
+title: Color Strech HNB
 ---
 
 Automatic image enhancement for Hydroxy naphthol blue (HNB) dyes.
