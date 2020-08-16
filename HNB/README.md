@@ -1,1 +1,3 @@
-You are probably after the [jupyter notebook](spectral%20analysis.ipynb).
+# Moved
+
+Please visit https://github.com/colorimetry/hnb-analysis/blob/master/HNB-analysis.ipynb

@@ -5,8 +5,8 @@ title: About
 
 ## What is this all about?
 
-*14 August 2020:* See a preliminary and incomplete draft of our thoughts
-[here](https://github.com/colorimetry/colorimetry-net/blob/master/HNB/spectral%20analysis.ipynb).
+*16 August 2020:* See a preliminary and incomplete draft of our thoughts
+[here](https://github.com/colorimetry/hnb-analysis/blob/master/HNB-analysis.ipynb).
 We are working on finishing the analysis there and updating this website
 accordingly. Comments and collaboration are warmly welcomed!
 
