@@ -9,7 +9,7 @@ use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRende
 
 const TEXTBOX_HEIGHT_PX: i32 = 20;
 const TEXT_PAD_PX: i32 = 2;
-const FONT: &'static str = "16px sans-serif";
+const FONT: &str = "16px sans-serif";
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -375,10 +375,11 @@ impl App {
                 // Draw text
                 ctx1.set_text_baseline("top");
                 ctx1.set_font(FONT);
-                ctx1.fill_text(
+                ctx1.fill_text_with_max_width(
                     file_info.file_data.name.as_str(),
                     0.0,
                     self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
+                    self.position_info.canv_width() as f64,
                 )
                 .unwrap();
 
@@ -415,10 +416,11 @@ impl App {
                 ctx2.set_text_baseline("top");
                 ctx2.set_font(FONT);
                 let text = format!("{}: Color Rotated", file_info.file_data.name.as_str());
-                ctx2.fill_text(
+                ctx2.fill_text_with_max_width(
                     &text,
                     0.0,
                     self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
+                    self.position_info.canv_width() as f64,
                 )
                 .unwrap();
 
@@ -443,10 +445,11 @@ impl App {
                 ctx_stretch.set_font(FONT);
                 let text = format!("{}: Color Stretched", file_info.file_data.name.as_str());
                 ctx_stretch
-                    .fill_text(
+                    .fill_text_with_max_width(
                         &text,
                         0.0,
                         self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
+                        self.position_info.canv_width() as f64,
                     )
                     .unwrap();
             }

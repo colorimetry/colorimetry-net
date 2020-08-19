@@ -1,6 +1,6 @@
 ---
 layout: default.liquid
-title: ColorSwitch HNB
+title: HNB enhance
 ---
 
 Automatic image enhancement for Hydroxy naphthol blue (HNB) dyes.
