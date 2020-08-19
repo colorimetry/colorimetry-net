@@ -7,18 +7,25 @@ use web_sys::{
 use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
+const TEXTBOX_HEIGHT_PX: i32 = 20;
+const TEXT_PAD_PX: i32 = 2;
+const FONT: &'static str = "16px sans-serif";
+
 pub struct App {
     link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
     image_error_closure: Closure<dyn FnMut(JsValue)>,
     tasks: Vec<ReaderTask>,
     file_info: Option<FileInfo>,
-    c1_node_ref: NodeRef,
-    c1_context_2d: Option<CanvasRenderingContext2d>,
-    c1_canvas: Option<HtmlCanvasElement>,
-    c2_node_ref: NodeRef,
-    c2_context_2d: Option<CanvasRenderingContext2d>,
-    c2_canvas: Option<HtmlCanvasElement>,
+    original_node_ref: NodeRef,
+    original_context_2d: Option<CanvasRenderingContext2d>,
+    original_canvas: Option<HtmlCanvasElement>,
+    crotate_node_ref: NodeRef,
+    crotate_context_2d: Option<CanvasRenderingContext2d>,
+    crotate_canvas: Option<HtmlCanvasElement>,
+    cstretch_node_ref: NodeRef,
+    cstretch_context_2d: Option<CanvasRenderingContext2d>,
+    cstretch_canvas: Option<HtmlCanvasElement>,
     state: AppState,
     error_log: Vec<String>,
     position_info: PositionInfo,
@@ -28,15 +35,19 @@ pub struct PositionInfo {
     /// the dimension of the div containing both canvases, when known
     image_dims: Option<(u32, u32)>,
     canv_width: i32,
+    image_height: i32,
     canv_height: i32,
 }
 
 impl PositionInfo {
     fn new() -> Self {
+        let image_height = 200;
+        let canv_height = image_height + TEXTBOX_HEIGHT_PX;
         Self {
             image_dims: None,
             canv_width: 300,
-            canv_height: 200,
+            image_height,
+            canv_height,
         }
     }
 
@@ -45,7 +56,8 @@ impl PositionInfo {
         log::info!("got image size {}x{}", img.width(), img.height());
         self.image_dims = Some((img.width(), img.height()));
         self.canv_width = img.width() as i32;
-        self.canv_height = img.height() as i32;
+        self.image_height = img.height() as i32;
+        self.canv_height = self.image_height + TEXTBOX_HEIGHT_PX;
     }
 
     /// The width of the canvas (canvas coords)
@@ -55,6 +67,10 @@ impl PositionInfo {
     /// The height of the canvas (canvas coords)
     fn canv_height(&self) -> i32 {
         self.canv_height
+    }
+    /// The height of the image (canvas coords)
+    fn image_height(&self) -> i32 {
+        self.image_height
     }
 }
 
@@ -100,12 +116,15 @@ impl Component for App {
             image_loaded_closure,
             image_error_closure,
             tasks: vec![],
-            c1_node_ref: NodeRef::default(),
-            c1_context_2d: None,
-            c1_canvas: None,
-            c2_node_ref: NodeRef::default(),
-            c2_context_2d: None,
-            c2_canvas: None,
+            original_node_ref: NodeRef::default(),
+            original_context_2d: None,
+            original_canvas: None,
+            crotate_node_ref: NodeRef::default(),
+            crotate_context_2d: None,
+            crotate_canvas: None,
+            cstretch_node_ref: NodeRef::default(),
+            cstretch_context_2d: None,
+            cstretch_canvas: None,
             file_info: None,
             state: AppState::Ready,
             error_log: vec![],
@@ -123,23 +142,32 @@ impl Component for App {
 
         self.update_canvas_contents();
 
-        let canvas = self.c1_node_ref.cast::<HtmlCanvasElement>().unwrap();
+        let canvas_original = self.original_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
-        let context_2d = CanvasRenderingContext2d::from(JsValue::from(
-            canvas.get_context("2d").unwrap().unwrap(),
+        let context_original = CanvasRenderingContext2d::from(JsValue::from(
+            canvas_original.get_context("2d").unwrap().unwrap(),
         ));
 
-        self.c1_canvas = Some(canvas);
-        self.c1_context_2d = Some(context_2d);
+        self.original_canvas = Some(canvas_original);
+        self.original_context_2d = Some(context_original);
 
-        let canvas = self.c2_node_ref.cast::<HtmlCanvasElement>().unwrap();
+        let canvas_rotate = self.crotate_node_ref.cast::<HtmlCanvasElement>().unwrap();
 
-        let context_2d = CanvasRenderingContext2d::from(JsValue::from(
-            canvas.get_context("2d").unwrap().unwrap(),
+        let context_rotate = CanvasRenderingContext2d::from(JsValue::from(
+            canvas_rotate.get_context("2d").unwrap().unwrap(),
         ));
 
-        self.c2_canvas = Some(canvas);
-        self.c2_context_2d = Some(context_2d);
+        self.crotate_canvas = Some(canvas_rotate);
+        self.crotate_context_2d = Some(context_rotate);
+
+        let canvas_stretch = self.cstretch_node_ref.cast::<HtmlCanvasElement>().unwrap();
+
+        let context_stretch = CanvasRenderingContext2d::from(JsValue::from(
+            canvas_stretch.get_context("2d").unwrap().unwrap(),
+        ));
+
+        self.cstretch_canvas = Some(canvas_stretch);
+        self.cstretch_context_2d = Some(context_stretch);
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -233,13 +261,19 @@ impl Component for App {
         html! {
             <div class="spa-container">
                 <div>
-                    <p>{"This page allows you to \"Color Switch\" an image. This means \
-                    that, in a Hue-Saturation-Lightness colorspace, the color of each pixel will be \
-                    increased 4x in saturation and rotated 180 degrees in Hue. "}
-                    <a href="https://doi.org/10.1101/2020.06.23.166397 ">{"Kellner et al. (2020)"}</a>
-                    {" found that this increases the perceptual ability to distinguish positive vs \
-                    negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
-                    HNB (Hydroxy naphthol blue) dye."}</p>
+                <h3>{"Color Stretch"}</h3>
+                <p>{"In a Hue-Saturation-Lightness colorspace, the color of each pixel will be \
+                stretched in hue to emphasize the colors of HNB and increased 4x in saturation. \
+                This increases the perceptual ability to distinguish positive vs \
+                negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
+                HNB (Hydroxy naphthol blue) dye."}</p>
+                <h3>{"Color Rotate"}</h3>
+                <p>{"In a Hue-Saturation-Lightness colorspace, the color of each pixel will be \
+                increased 4x in saturation and rotated 180 degrees in Hue. "}
+                <a href="https://doi.org/10.1101/2020.06.23.166397 ">{"Kellner et al. (2020)"}</a>
+                {" found that this increases the perceptual ability to distinguish positive vs \
+                negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
+                HNB (Hydroxy naphthol blue) dye."}</p>
                 </div>
                 <div class=(spinner_div_class),>
                     <div class="compute-modal-inner",>
@@ -272,19 +306,14 @@ impl Component for App {
 
                 { self.view_file_info() }
                 <div id="hnb-app-canvas-div">
-                    <h2><span class="stage">{"2"}</span>{"View the original and ColorSwitched image."}</h2>
+                    <h2><span class="stage">{"2"}</span>{"View the original, Color Stretched and Color Rotated images."}</h2>
                     <div id="hnb-app-canvas-container">
-                        <canvas class="im-canv" ref={self.c1_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
-                        <canvas class="im-canv" ref={self.c2_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                        <canvas class="im-canv" ref={self.original_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                        <canvas class="im-canv" ref={self.cstretch_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                        <canvas class="im-canv" ref={self.crotate_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
                     </div>
                 </div>
                 { self.view_errors() }
-
-                // <div>
-                //     <h2><span class="stage">{"3"}</span>{"Quantify your results."}</h2>
-                //     {"To be implemented..."}
-                // </div>
-
             </div>
         }
     }
@@ -326,9 +355,11 @@ impl App {
     fn update_canvas_contents(&self) {
         if let Some(file_info) = &self.file_info {
             // The image has finished loading (decoding).
-            if let (Some(ctx1), Some(ctx2)) =
-                (self.c1_context_2d.as_ref(), self.c2_context_2d.as_ref())
-            {
+            if let (Some(ctx1), Some(ctx2), Some(ctx_stretch)) = (
+                self.original_context_2d.as_ref(),
+                self.crotate_context_2d.as_ref(),
+                self.cstretch_context_2d.as_ref(),
+            ) {
                 log::info!("drawing canvas images");
 
                 // Draw the original image on the canvas.
@@ -337,7 +368,17 @@ impl App {
                     0.0,
                     0.0,
                     self.position_info.canv_width() as f64,
-                    self.position_info.canv_height() as f64,
+                    self.position_info.image_height() as f64,
+                )
+                .unwrap();
+
+                // Draw text
+                ctx1.set_text_baseline("top");
+                ctx1.set_font(FONT);
+                ctx1.fill_text(
+                    file_info.file_data.name.as_str(),
+                    0.0,
+                    self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
                 )
                 .unwrap();
 
@@ -347,14 +388,14 @@ impl App {
                         0.0,
                         0.0,
                         self.position_info.canv_width() as f64,
-                        self.position_info.canv_height() as f64,
+                        self.position_info.image_height() as f64,
                     )
                     .unwrap();
 
                 let w = image_data.width();
                 let h = image_data.height();
                 debug_assert!(w as i32 == self.position_info.canv_width());
-                debug_assert!(h as i32 == self.position_info.canv_height());
+                debug_assert!(h as i32 == self.position_info.image_height());
 
                 let new_data = {
                     let mut data = image_data.data();
@@ -369,6 +410,45 @@ impl App {
                     .unwrap()
                 };
                 ctx2.put_image_data(&new_data, 0.0, 0.0).unwrap();
+
+                // Draw text
+                ctx2.set_text_baseline("top");
+                ctx2.set_font(FONT);
+                let text = format!("{}: Color Rotated", file_info.file_data.name.as_str());
+                ctx2.fill_text(
+                    &text,
+                    0.0,
+                    self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
+                )
+                .unwrap();
+
+                let new_data_stretch = {
+                    let mut data = image_data.data();
+
+                    crate::transform_colors::color_stretch(data.as_mut_slice());
+
+                    web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+                        Clamped(data.as_mut_slice()),
+                        w,
+                        h,
+                    )
+                    .unwrap()
+                };
+                ctx_stretch
+                    .put_image_data(&new_data_stretch, 0.0, 0.0)
+                    .unwrap();
+
+                // Draw text
+                ctx_stretch.set_text_baseline("top");
+                ctx_stretch.set_font(FONT);
+                let text = format!("{}: Color Stretched", file_info.file_data.name.as_str());
+                ctx_stretch
+                    .fill_text(
+                        &text,
+                        0.0,
+                        self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
+                    )
+                    .unwrap();
             }
         }
     }
