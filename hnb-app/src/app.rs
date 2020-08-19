@@ -9,7 +9,7 @@ use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRende
 
 const TEXTBOX_HEIGHT_PX: i32 = 20;
 const TEXT_PAD_PX: i32 = 2;
-const FONT: &'static str = "16px sans-serif";
+const FONT: &str = "16px sans-serif";
 
 pub struct App {
     link: ComponentLink<Self>,
