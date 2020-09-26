@@ -28,6 +28,7 @@ features = [
   'CanvasRenderingContext2d',
   'DataTransfer',
   'DragEvent',
+  'File',
   'HtmlCanvasElement',
   'HtmlImageElement',
   'ImageData',
