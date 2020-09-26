@@ -2,9 +2,9 @@ use js_sys::{Array, Uint8Array};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, Clamped, JsValue};
 use web_sys::{
-    Blob, CanvasRenderingContext2d, DragEvent, HtmlCanvasElement, HtmlImageElement, Url,
+    Blob, CanvasRenderingContext2d, DragEvent, File, HtmlCanvasElement, HtmlImageElement, Url,
 };
-use yew::services::reader::{File, FileData, ReaderService, ReaderTask};
+use yew::services::reader::{FileData, ReaderService, ReaderTask};
 use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
 
 const TEXTBOX_HEIGHT_PX: i32 = 20;
