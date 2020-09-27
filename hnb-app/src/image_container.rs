@@ -247,7 +247,7 @@ impl Component for ImageContainer {
         html! {
             <span class="im-span">
                 <div>
-                    <canvas ref={self.node_ref.clone()}, width={pi.canv_width()}, height={pi.canv_height()} />
+                    <canvas class="im-canvas", ref={self.node_ref.clone()}, width={pi.canv_width()}, height={pi.canv_height()} />
                 </div>
                 <div>
                     {button}

@@ -102,6 +102,11 @@ h1 {
   padding: 5px;
 }
 
+.im-canvas {
+  display: inline-block;
+  max-width: 100%;
+}
+
 .im-btn {
   margin: 0 auto; // auto left/right margins
   display: block;
