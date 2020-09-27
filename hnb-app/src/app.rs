@@ -1,15 +1,14 @@
 use js_sys::{Array, Uint8Array};
+use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::JsCast;
-use wasm_bindgen::{closure::Closure, Clamped, JsValue};
-use web_sys::{
-    Blob, CanvasRenderingContext2d, DragEvent, File, HtmlCanvasElement, HtmlImageElement, Url,
-};
+use wasm_bindgen::{closure::Closure, JsValue};
+use web_sys::{Blob, DragEvent, File, HtmlImageElement, Url};
 use yew::services::reader::{FileData, ReaderService, ReaderTask};
-use yew::{html, ChangeData, Component, ComponentLink, Html, NodeRef, ShouldRender};
+use yew::{html, ChangeData, Component, ComponentLink, Html, ShouldRender};
 
-const TEXTBOX_HEIGHT_PX: i32 = 20;
-const TEXT_PAD_PX: i32 = 2;
-const FONT: &str = "16px sans-serif";
+use crate::image_container::{ImCanvasWrapper, ImType, ImageContainer};
+
+use crate::PositionInfo;
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -17,61 +16,12 @@ pub struct App {
     image_error_closure: Closure<dyn FnMut(JsValue)>,
     tasks: Vec<ReaderTask>,
     file_info: Option<FileInfo>,
-    original_node_ref: NodeRef,
-    original_context_2d: Option<CanvasRenderingContext2d>,
-    original_canvas: Option<HtmlCanvasElement>,
-    crotate_node_ref: NodeRef,
-    crotate_context_2d: Option<CanvasRenderingContext2d>,
-    crotate_canvas: Option<HtmlCanvasElement>,
-    cstretch_node_ref: NodeRef,
-    cstretch_context_2d: Option<CanvasRenderingContext2d>,
-    cstretch_canvas: Option<HtmlCanvasElement>,
+    im_orig: Rc<RefCell<ImCanvasWrapper>>,
+    im_rotated: Rc<RefCell<ImCanvasWrapper>>,
+    im_stretch: Rc<RefCell<ImCanvasWrapper>>,
     state: AppState,
     error_log: Vec<String>,
-    position_info: PositionInfo,
-}
-
-pub struct PositionInfo {
-    /// the dimension of the div containing both canvases, when known
-    image_dims: Option<(u32, u32)>,
-    canv_width: i32,
-    image_height: i32,
-    canv_height: i32,
-}
-
-impl PositionInfo {
-    fn new() -> Self {
-        let image_height = 200;
-        let canv_height = image_height + TEXTBOX_HEIGHT_PX;
-        Self {
-            image_dims: None,
-            canv_width: 300,
-            image_height,
-            canv_height,
-        }
-    }
-
-    /// An image has been loaded, recalculate various sizing info.
-    fn update_for_image(&mut self, img: &HtmlImageElement) {
-        log::info!("got image size {}x{}", img.width(), img.height());
-        self.image_dims = Some((img.width(), img.height()));
-        self.canv_width = img.width() as i32;
-        self.image_height = img.height() as i32;
-        self.canv_height = self.image_height + TEXTBOX_HEIGHT_PX;
-    }
-
-    /// The width of the canvas (canvas coords)
-    fn canv_width(&self) -> i32 {
-        self.canv_width
-    }
-    /// The height of the canvas (canvas coords)
-    fn canv_height(&self) -> i32 {
-        self.canv_height
-    }
-    /// The height of the image (canvas coords)
-    fn image_height(&self) -> i32 {
-        self.image_height
-    }
+    position_info: Rc<RefCell<PositionInfo>>,
 }
 
 pub enum AppState {
@@ -111,24 +61,20 @@ impl Component for App {
             link2.send_message(Msg::ImageErrored(err_str));
         }) as Box<dyn FnMut(_)>);
 
+        let position_info = Rc::new(RefCell::new(PositionInfo::new()));
+
         App {
             link,
             image_loaded_closure,
             image_error_closure,
             tasks: vec![],
-            original_node_ref: NodeRef::default(),
-            original_context_2d: None,
-            original_canvas: None,
-            crotate_node_ref: NodeRef::default(),
-            crotate_context_2d: None,
-            crotate_canvas: None,
-            cstretch_node_ref: NodeRef::default(),
-            cstretch_context_2d: None,
-            cstretch_canvas: None,
+            im_orig: ImCanvasWrapper::new(ImType::Original, position_info.clone()),
+            im_rotated: ImCanvasWrapper::new(ImType::Rotated, position_info.clone()),
+            im_stretch: ImCanvasWrapper::new(ImType::Stretch, position_info.clone()),
             file_info: None,
             state: AppState::Ready,
             error_log: vec![],
-            position_info: PositionInfo::new(),
+            position_info,
         }
     }
 
@@ -137,37 +83,7 @@ impl Component for App {
     }
 
     fn rendered(&mut self, _first_render: bool) {
-        // Once rendered, store references for the canvas and 2D context. These can be used for
-        // resizing the rendering area when the window or canvas element are resized.
-
         self.update_canvas_contents();
-
-        let canvas_original = self.original_node_ref.cast::<HtmlCanvasElement>().unwrap();
-
-        let context_original = CanvasRenderingContext2d::from(JsValue::from(
-            canvas_original.get_context("2d").unwrap().unwrap(),
-        ));
-
-        self.original_canvas = Some(canvas_original);
-        self.original_context_2d = Some(context_original);
-
-        let canvas_rotate = self.crotate_node_ref.cast::<HtmlCanvasElement>().unwrap();
-
-        let context_rotate = CanvasRenderingContext2d::from(JsValue::from(
-            canvas_rotate.get_context("2d").unwrap().unwrap(),
-        ));
-
-        self.crotate_canvas = Some(canvas_rotate);
-        self.crotate_context_2d = Some(context_rotate);
-
-        let canvas_stretch = self.cstretch_node_ref.cast::<HtmlCanvasElement>().unwrap();
-
-        let context_stretch = CanvasRenderingContext2d::from(JsValue::from(
-            canvas_stretch.get_context("2d").unwrap().unwrap(),
-        ));
-
-        self.cstretch_canvas = Some(canvas_stretch);
-        self.cstretch_context_2d = Some(context_stretch);
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -177,7 +93,10 @@ impl Component for App {
                 let old_state = std::mem::replace(&mut self.state, AppState::Ready);
 
                 if let AppState::DecodingImage(file_info) = old_state {
-                    self.position_info.update_for_image(&file_info.img);
+                    self.position_info
+                        .borrow_mut()
+                        .update_for_image(&file_info.img);
+
                     self.file_info = Some(file_info);
                     self.update_canvas_contents();
                 }
@@ -308,9 +227,9 @@ impl Component for App {
                 <div id="hnb-app-canvas-div">
                     <h2><span class="stage">{"2"}</span>{"View the original, Color Stretched and Color Rotated images."}</h2>
                     <div id="hnb-app-canvas-container">
-                        <canvas class="im-canv" ref={self.original_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
-                        <canvas class="im-canv" ref={self.cstretch_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
-                        <canvas class="im-canv" ref={self.crotate_node_ref.clone()}, width={self.position_info.canv_width()}, height={self.position_info.canv_height()} />
+                        <ImageContainer canvas_wrapper={self.im_orig.clone()} />
+                        <ImageContainer canvas_wrapper={self.im_stretch.clone()} />
+                        <ImageContainer canvas_wrapper={self.im_rotated.clone()} />
                     </div>
                 </div>
                 { self.view_errors() }
@@ -354,104 +273,17 @@ impl App {
     /// when the dimensions of our container change.
     fn update_canvas_contents(&self) {
         if let Some(file_info) = &self.file_info {
-            // The image has finished loading (decoding).
-            if let (Some(ctx1), Some(ctx2), Some(ctx_stretch)) = (
-                self.original_context_2d.as_ref(),
-                self.crotate_context_2d.as_ref(),
-                self.cstretch_context_2d.as_ref(),
-            ) {
-                log::info!("drawing canvas images");
+            let mut im_orig = self.im_orig.borrow_mut();
+            let fname = file_info.file_data.name.as_str();
+            im_orig.draw_image(&file_info.img, fname);
+            let image_data = im_orig.get_data();
 
-                // Draw the original image on the canvas.
-                ctx1.draw_image_with_html_image_element_and_dw_and_dh(
-                    &file_info.img,
-                    0.0,
-                    0.0,
-                    self.position_info.canv_width() as f64,
-                    self.position_info.image_height() as f64,
-                )
-                .unwrap();
+            if let Some(image_data) = image_data {
+                let mut im_rotated = self.im_rotated.borrow_mut();
+                im_rotated.draw_data(&image_data, &fname);
 
-                // Draw text
-                ctx1.set_text_baseline("top");
-                ctx1.set_font(FONT);
-                ctx1.fill_text_with_max_width(
-                    file_info.file_data.name.as_str(),
-                    0.0,
-                    self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
-                    self.position_info.canv_width() as f64,
-                )
-                .unwrap();
-
-                // Read the original image data from the canvas.
-                let image_data: web_sys::ImageData = ctx1
-                    .get_image_data(
-                        0.0,
-                        0.0,
-                        self.position_info.canv_width() as f64,
-                        self.position_info.image_height() as f64,
-                    )
-                    .unwrap();
-
-                let w = image_data.width();
-                let h = image_data.height();
-                debug_assert!(w as i32 == self.position_info.canv_width());
-                debug_assert!(h as i32 == self.position_info.image_height());
-
-                let new_data = {
-                    let mut data = image_data.data();
-
-                    crate::transform_colors::saturate_and_rotate(data.as_mut_slice());
-
-                    web_sys::ImageData::new_with_u8_clamped_array_and_sh(
-                        Clamped(data.as_mut_slice()),
-                        w,
-                        h,
-                    )
-                    .unwrap()
-                };
-                ctx2.put_image_data(&new_data, 0.0, 0.0).unwrap();
-
-                // Draw text
-                ctx2.set_text_baseline("top");
-                ctx2.set_font(FONT);
-                let text = format!("{}: Color Rotated", file_info.file_data.name.as_str());
-                ctx2.fill_text_with_max_width(
-                    &text,
-                    0.0,
-                    self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
-                    self.position_info.canv_width() as f64,
-                )
-                .unwrap();
-
-                let new_data_stretch = {
-                    let mut data = image_data.data();
-
-                    crate::transform_colors::color_stretch(data.as_mut_slice());
-
-                    web_sys::ImageData::new_with_u8_clamped_array_and_sh(
-                        Clamped(data.as_mut_slice()),
-                        w,
-                        h,
-                    )
-                    .unwrap()
-                };
-                ctx_stretch
-                    .put_image_data(&new_data_stretch, 0.0, 0.0)
-                    .unwrap();
-
-                // Draw text
-                ctx_stretch.set_text_baseline("top");
-                ctx_stretch.set_font(FONT);
-                let text = format!("{}: Color Stretched", file_info.file_data.name.as_str());
-                ctx_stretch
-                    .fill_text_with_max_width(
-                        &text,
-                        0.0,
-                        self.position_info.image_height() as f64 + TEXT_PAD_PX as f64,
-                        self.position_info.canv_width() as f64,
-                    )
-                    .unwrap();
+                let mut im_stretch = self.im_stretch.borrow_mut();
+                im_stretch.draw_data(&image_data, &fname);
             }
         }
     }

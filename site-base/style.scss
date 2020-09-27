@@ -98,8 +98,13 @@ h1 {
   flex-flow: row wrap;
 }
 
-.im-canv {
+.im-span {
   padding: 5px;
+}
+
+.im-btn {
+  margin: 0 auto; // auto left/right margins
+  display: block;
 }
 
 // .spacer {

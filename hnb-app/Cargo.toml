@@ -26,9 +26,11 @@ version = "0.3.4"
 features = [
   'Blob',
   'CanvasRenderingContext2d',
+  'CssStyleDeclaration',
   'DataTransfer',
   'DragEvent',
   'File',
+  'HtmlAnchorElement',
   'HtmlCanvasElement',
   'HtmlImageElement',
   'ImageData',

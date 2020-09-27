@@ -26,3 +26,12 @@ yarn run build
 ```
 yarn run start:dev
 ```
+
+To view the CSS in local development, additionally do the the following
+(unfortunately, this does not hot load changes to CSS).
+
+```
+cd site-back
+cobalt build
+cp _site/style.css ../hnb-app/dist
+```
