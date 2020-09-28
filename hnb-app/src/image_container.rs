@@ -37,7 +37,6 @@ impl ImCanvasWrapper {
 
 impl ImCanvasWrapper {
     pub fn draw_image(&mut self, img: &web_sys::HtmlImageElement, fname: &str) {
-        // TODO: clear canvas
         if let Some(ctx) = &self.context_2d {
             ctx.clear_rect(
                 0.0,
@@ -122,7 +121,7 @@ impl ImCanvasWrapper {
                     0.0,
                     0.0,
                     self.position_info.borrow().canv_width() as f64,
-                    self.position_info.borrow().canv_height() as f64,
+                    self.position_info.borrow().image_height() as f64,
                 )
                 .unwrap();
             Some(image_data)
