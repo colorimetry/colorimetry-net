@@ -146,6 +146,14 @@ impl ImCanvasWrapper {
 
         format!("{}-{}", stem.to_str().unwrap(), what)
     }
+
+    fn button_text(&self) -> &str {
+        match self.im_type {
+            ImType::Original => "Download original",
+            ImType::Rotated => "Download color-rotated",
+            ImType::Stretch => "Download color-stretched",
+        }
+    }
 }
 
 pub struct ImageContainer {
@@ -236,10 +244,11 @@ impl Component for ImageContainer {
 
     fn view(&self) -> Html {
         let cw = self.canvas_wrapper.borrow();
+        let btn_text = cw.button_text();
         let pi = cw.position_info.borrow();
         let button = if cw.fname.len() > 0 {
             html! {
-                <button class="im-btn", onclick=self.link.callback(|_| Msg::Clicked)>{ "Download" }</button>
+                <button class=("im-btn","btn"), onclick=self.link.callback(|_| Msg::Clicked)>{ btn_text }</button>
             }
         } else {
             html! {<span></span>}
@@ -247,10 +256,10 @@ impl Component for ImageContainer {
         html! {
             <span class="im-span">
                 <div>
-                    <canvas class="im-canvas", ref={self.node_ref.clone()}, width={pi.canv_width()}, height={pi.canv_height()} />
+                    {button}
                 </div>
                 <div>
-                    {button}
+                    <canvas class="im-canvas", ref={self.node_ref.clone()}, width={pi.canv_width()}, height={pi.canv_height()} />
                 </div>
             </span>
         }
