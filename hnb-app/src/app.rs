@@ -207,19 +207,22 @@ impl Component for App {
                 <div>
                     <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
                     <div class="drag-and-drop" ondrop=ondrop ondragover=ondragover>
-                        {"Drag a file here or select an image "}
-                        <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
-                                let mut result = Vec::new();
-                                if let ChangeData::Files(files) = value {
-                                    let files = js_sys::try_iter(&files)
-                                        .unwrap()
-                                        .unwrap()
-                                        .into_iter()
-                                        .map(|v| File::from(v.unwrap()));
-                                    result.extend(files);
-                                }
-                                Msg::Files(result)
-                            })/>
+                        {"Drag a file here or select an image."}
+                        <label class=("btn","file-btn")>
+                            <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
+                                    let mut result = Vec::new();
+                                    if let ChangeData::Files(files) = value {
+                                        let files = js_sys::try_iter(&files)
+                                            .unwrap()
+                                            .unwrap()
+                                            .into_iter()
+                                            .map(|v| File::from(v.unwrap()));
+                                        result.extend(files);
+                                    }
+                                    Msg::Files(result)
+                                })/>
+                            {"Select file..."}
+                        </label>
                     </div>
                 </div>
 
