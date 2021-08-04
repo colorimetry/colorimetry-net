@@ -45,6 +45,14 @@ impl PositionInfo {
     fn canv_height(&self) -> i32 {
         self.canv_height
     }
+    /// The width of the canvas (canvas coords)
+    fn canv_width_str(&self) -> String {
+        format!("{}", self.canv_width)
+    }
+    /// The height of the canvas (canvas coords)
+    fn canv_height_str(&self) -> String {
+        format!("{}", self.canv_height)
+    }
     /// The height of the image (canvas coords)
     fn image_height(&self) -> i32 {
         self.image_height

@@ -1,7 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
-use yew::prelude::{html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
+use yew::prelude::{
+    classes, html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender,
+};
 
 use crate::PositionInfo;
 
@@ -247,7 +249,7 @@ impl Component for ImageContainer {
         let pi = cw.position_info.borrow();
         let button = if cw.fname.is_empty() {
             html! {
-                <button class=("im-btn","btn"), onclick=self.link.callback(|_| Msg::Clicked)>{ btn_text }</button>
+                <button class=classes!("im-btn","btn") onclick=self.link.callback(|_| Msg::Clicked)>{ btn_text }</button>
             }
         } else {
             html! {<span></span>}
@@ -258,7 +260,7 @@ impl Component for ImageContainer {
                     {button}
                 </div>
                 <div>
-                    <canvas class="im-canvas", ref={self.node_ref.clone()}, width={pi.canv_width()}, height={pi.canv_height()} />
+                    <canvas class="im-canvas" ref={self.node_ref.clone()} width={pi.canv_width_str()} height={pi.canv_height_str()} />
                 </div>
             </span>
         }
