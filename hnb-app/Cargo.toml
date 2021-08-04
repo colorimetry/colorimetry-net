@@ -16,7 +16,7 @@ wasm-bindgen = "0.2.75"
 wasm-logger = "0.2"
 yew = "0.17"
 js-sys = "0.3"
-palette = {version="0.5", default-features=false, features=["libm"]}
+palette = {version="0.6", default-features=false, features=["libm"]}
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
