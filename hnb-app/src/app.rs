@@ -4,7 +4,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, JsValue};
 use web_sys::{Blob, DragEvent, File, HtmlImageElement, Url};
 use yew::services::reader::{FileData, ReaderService, ReaderTask};
-use yew::{html, ChangeData, Component, ComponentLink, Html, ShouldRender};
+use yew::{classes, html, ChangeData, Component, ComponentLink, Html, ShouldRender};
 
 use crate::image_container::{ImCanvasWrapper, ImType, ImageContainer};
 
@@ -134,7 +134,7 @@ impl Component for App {
                 for file in files.into_iter() {
                     let task = {
                         let callback = self.link.callback(Msg::FileLoaded);
-                        ReaderService::new().read_file(file, callback).unwrap()
+                        ReaderService::read_file(file, callback).unwrap()
                     };
                     self.tasks.push(task);
                 }
@@ -194,12 +194,12 @@ impl Component for App {
                 negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
                 HNB (Hydroxy naphthol blue) dye."}</p>
                 </div>
-                <div class=(spinner_div_class),>
-                    <div class="compute-modal-inner",>
+                <div class=spinner_div_class>
+                    <div class="compute-modal-inner">
                         <p>
                             {state}
                         </p>
-                        <div class="lds-ellipsis",>
+                        <div class="lds-ellipsis">
                             <div></div><div></div><div></div><div></div>
                         </div>
                     </div>
@@ -208,7 +208,7 @@ impl Component for App {
                     <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
                     <div class="drag-and-drop" ondrop=ondrop ondragover=ondragover>
                         {"Drag a file here or select an image."}
-                        <label class=("btn","file-btn")>
+                        <label class=classes!("btn","file-btn")>
                             <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
                                     let mut result = Vec::new();
                                     if let ChangeData::Files(files) = value {
