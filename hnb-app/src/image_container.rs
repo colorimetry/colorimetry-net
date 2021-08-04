@@ -47,7 +47,7 @@ impl ImCanvasWrapper {
 
             // Draw the original image on the canvas.
             ctx.draw_image_with_html_image_element_and_dw_and_dh(
-                &img,
+                img,
                 0.0,
                 0.0,
                 self.position_info.borrow().canv_width() as f64,

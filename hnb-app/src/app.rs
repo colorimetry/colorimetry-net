@@ -283,10 +283,10 @@ impl App {
 
             if let Some(image_data) = image_data {
                 let mut im_rotated = self.im_rotated.borrow_mut();
-                im_rotated.draw_data(&image_data, &fname);
+                im_rotated.draw_data(&image_data, fname);
 
                 let mut im_stretch = self.im_stretch.borrow_mut();
-                im_stretch.draw_data(&image_data, &fname);
+                im_stretch.draw_data(&image_data, fname);
             }
         }
     }
