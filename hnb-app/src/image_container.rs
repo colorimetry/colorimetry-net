@@ -1,9 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
-use yew::prelude::{
-    classes, html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender,
-};
+use yew::prelude::*;
 
 use crate::PositionInfo;
 
@@ -158,16 +156,14 @@ impl ImCanvasWrapper {
 }
 
 pub struct ImageContainer {
-    link: ComponentLink<Self>,
     node_ref: NodeRef,
-    canvas_wrapper: Rc<RefCell<ImCanvasWrapper>>,
 }
 
 pub enum Msg {
     Clicked,
 }
 
-#[derive(Properties, Clone)]
+#[derive(PartialEq, Clone, Properties)]
 pub struct Props {
     pub canvas_wrapper: Rc<RefCell<ImCanvasWrapper>>,
 }
@@ -175,40 +171,34 @@ pub struct Props {
 impl Component for ImageContainer {
     type Message = Msg;
     type Properties = Props;
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
-            link,
             node_ref: NodeRef::default(),
-            canvas_wrapper: props.canvas_wrapper,
         }
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.canvas_wrapper = props.canvas_wrapper;
-        true
-    }
-
-    fn rendered(&mut self, _first_render: bool) {
+    // fn rendered(&mut self, _first_render: bool) {
+    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
-        if self.canvas_wrapper.borrow().canvas.is_none() {
-            assert!(self.canvas_wrapper.borrow().context_2d.is_none());
+        if ctx.props().canvas_wrapper.borrow().canvas.is_none() {
+            assert!(ctx.props().canvas_wrapper.borrow().context_2d.is_none());
             let canvas = self.node_ref.cast::<HtmlCanvasElement>().unwrap();
 
             let context = CanvasRenderingContext2d::from(JsValue::from(
                 canvas.get_context("2d").unwrap().unwrap(),
             ));
 
-            let mut canvas_wrapper = self.canvas_wrapper.borrow_mut();
+            let mut canvas_wrapper = ctx.props().canvas_wrapper.borrow_mut();
             canvas_wrapper.canvas.replace(canvas);
             canvas_wrapper.context_2d.replace(context);
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Clicked => {
-                let canvas_wrapper = self.canvas_wrapper.borrow();
+                let canvas_wrapper = ctx.props().canvas_wrapper.borrow();
 
                 let data_url = canvas_wrapper
                     .canvas
@@ -243,13 +233,13 @@ impl Component for ImageContainer {
         false
     }
 
-    fn view(&self) -> Html {
-        let cw = self.canvas_wrapper.borrow();
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let cw = ctx.props().canvas_wrapper.borrow();
         let btn_text = cw.button_text();
         let pi = cw.position_info.borrow();
         let button = if cw.fname.is_empty() {
             html! {
-                <button class=classes!("im-btn","btn") onclick=self.link.callback(|_| Msg::Clicked)>{ btn_text }</button>
+                <button class={classes!("im-btn","btn")} onclick={ctx.link().callback(|_| Msg::Clicked)}>{ btn_text }</button>
             }
         } else {
             html! {<span></span>}

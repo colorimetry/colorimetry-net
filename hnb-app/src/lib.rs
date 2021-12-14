@@ -69,11 +69,17 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen]
 pub fn run_app() -> Result<(), JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
-    // yew::start_app::<app::App>();
-    yew::initialize();
-    let document = yew::utils::document();
+
+    let document = gloo_utils::document();
     let div_wrapper: web_sys::Element = document.query_selector("#app-main").unwrap().unwrap();
-    yew::app::App::<app::App>::new().mount(div_wrapper);
-    yew::run_loop();
-    Ok(())
+
+    // let props = app::App::Properties::default();
+    yew::start_app_with_props_in_element(div_wrapper, Default::default())
+    // // yew::start_app::<app::App>();
+    // yew::initialize();
+    // let document = yew::utils::document();
+    // let div_wrapper: web_sys::Element = document.query_selector("#app-main").unwrap().unwrap();
+    // yew::app::App::<app::App>::new().mount(div_wrapper);
+    // yew::run_loop();
+    // Ok(())
 }

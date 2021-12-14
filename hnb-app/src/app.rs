@@ -2,19 +2,22 @@ use js_sys::{Array, Uint8Array};
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, JsValue};
-use web_sys::{Blob, DragEvent, File, HtmlImageElement, Url};
-use yew::services::reader::{FileData, ReaderService, ReaderTask};
-use yew::{classes, html, ChangeData, Component, ComponentLink, Html, ShouldRender};
+
+use gloo_file::{callbacks::FileReader, File};
+use wasm_bindgen::prelude::*;
+use web_sys::{Blob, DragEvent, HtmlImageElement, HtmlInputElement, Url};
+use yew::prelude::*;
 
 use crate::image_container::{ImCanvasWrapper, ImType, ImageContainer};
 
 use crate::PositionInfo;
 
+use std::collections::HashMap;
+
 pub struct App {
-    link: ComponentLink<Self>,
     image_loaded_closure: Closure<dyn FnMut(JsValue)>,
     image_error_closure: Closure<dyn FnMut(JsValue)>,
-    tasks: Vec<ReaderTask>,
+    readers: HashMap<String, FileReader>,
     file_info: Option<FileInfo>,
     im_orig: Rc<RefCell<ImCanvasWrapper>>,
     im_rotated: Rc<RefCell<ImCanvasWrapper>>,
@@ -31,29 +34,33 @@ pub enum AppState {
 }
 
 pub struct FileInfo {
-    file_data: FileData,
+    file_data: gloo_file::File,
+    // file_data: Vec<u8>,
     img: HtmlImageElement,
 }
 
 pub enum Msg {
-    FileLoaded(FileData),
-    Files(Vec<File>),
+    FileChanged(File),
+    FileLoaded(String, Vec<u8>),
+    // FileLoaded(FileData),
+    // Files(Vec<File>),
     ImageLoaded,
     ImageErrored(String),
-    Nop,
+    FileDropped(DragEvent),
+    FileDraggedOver(DragEvent),
 }
 
 impl Component for App {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let link2 = link.clone();
+    fn create(ctx: &Context<Self>) -> Self {
+        let link2 = ctx.link().clone();
         let image_loaded_closure = Closure::wrap(Box::new(move |_| {
             link2.send_message(Msg::ImageLoaded);
         }) as Box<dyn FnMut(JsValue)>);
 
-        let link2 = link.clone();
+        let link2 = ctx.link().clone();
         let image_error_closure = Closure::wrap(Box::new(move |arg| {
             // let err_str = format!("Failed to load image.{:?}", arg);
             let err_str = "Failed to load image.".into();
@@ -64,10 +71,9 @@ impl Component for App {
         let position_info = Rc::new(RefCell::new(PositionInfo::new()));
 
         App {
-            link,
             image_loaded_closure,
             image_error_closure,
-            tasks: vec![],
+            readers: Default::default(),
             im_orig: ImCanvasWrapper::new(ImType::Original, position_info.clone()),
             im_rotated: ImCanvasWrapper::new(ImType::Rotated, position_info.clone()),
             im_stretch: ImCanvasWrapper::new(ImType::Stretch, position_info.clone()),
@@ -78,15 +84,12 @@ impl Component for App {
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn rendered(&mut self, _first_render: bool) {
+    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
+        // fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {
         self.update_canvas_contents();
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::ImageLoaded => {
                 // The image has finished decoding and we can display it now.
@@ -106,11 +109,11 @@ impl Component for App {
                 self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
-            Msg::FileLoaded(file_data) => {
+            Msg::FileLoaded(filename, rbuf) => {
                 // The bytes of the file have been read.
 
                 // Convert to a Uint8Array and initiate the image decoding.
-                let buffer = Uint8Array::from(file_data.content.as_slice());
+                let buffer = Uint8Array::from(rbuf.as_slice());
                 let buffer_val: &JsValue = buffer.as_ref();
                 let parts = Array::new_with_length(1);
                 parts.set(0, buffer_val.clone());
@@ -123,48 +126,76 @@ impl Component for App {
 
                 img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
 
+                let file_data = gloo_file::File::new(filename.as_str(), rbuf.as_slice());
+
                 self.state = AppState::DecodingImage(FileInfo { file_data, img });
             }
-            Msg::Files(files) => {
-                // The user has selected file(s).
-                self.error_log.clear();
+            // Msg::Files(files) => {
+            //     // The user has selected file(s).
+            //     self.error_log.clear();
 
-                self.state = AppState::ReadingFile;
+            //     self.state = AppState::ReadingFile;
 
-                for file in files.into_iter() {
-                    let task = {
-                        let callback = self.link.callback(Msg::FileLoaded);
-                        ReaderService::read_file(file, callback).unwrap()
-                    };
-                    self.tasks.push(task);
+            //     for file in files.into_iter() {
+            //         let task = {
+            //             let callback = ctx.link().callback(Msg::FileLoaded);
+            //             ReaderService::read_file(file, callback).unwrap()
+            //         };
+            //         self.tasks.push(task);
+            //     }
+            // }
+            Msg::FileChanged(file) => {
+                let filename = file.name();
+                let link = ctx.link().clone();
+                let filename2 = filename.clone();
+                let reader = gloo_file::callbacks::read_as_bytes(&file, move |res| {
+                    link.send_message(Msg::FileLoaded(
+                        filename2,
+                        res.expect("failed to read file"),
+                    ))
+                });
+                self.readers.insert(filename, reader);
+            }
+            Msg::FileDropped(evt) => {
+                evt.prevent_default();
+                let files = evt.data_transfer().unwrap_throw().files();
+                // log_1(&format!("files dropped: {:?}", files).into());
+                if let Some(files) = files {
+                    let mut result = Vec::new();
+                    let files = js_sys::try_iter(&files)
+                        .unwrap_throw()
+                        .unwrap_throw()
+                        .into_iter()
+                        .map(|v| web_sys::File::from(v.unwrap_throw()))
+                        .map(File::from);
+                    result.extend(files);
+                    assert!(result.len() == 1);
+                    ctx.link()
+                        .send_message(Msg::FileChanged(result.pop().unwrap_throw()));
                 }
             }
-            Msg::Nop => return false,
+            Msg::FileDraggedOver(evt) => {
+                evt.prevent_default();
+            }
         }
         true
     }
 
-    fn view(&self) -> Html {
-        let ondragover = self.link.callback(|e: DragEvent| {
-            // prevent default to allow drop
-            e.prevent_default();
-            Msg::Nop
-        });
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let ondragover = ctx.link().callback(|e| Msg::FileDraggedOver(e));
 
-        let ondrop = self.link.callback(|e: DragEvent| {
-            e.prevent_default();
+        let ondrop = ctx.link().callback(|e| {
+            // if let Some(ft) = e.data_transfer() {
+            //     return Msg::Files(
+            //         js_sys::try_iter(&ft.files().unwrap())
+            //             .unwrap()
+            //             .unwrap()
+            //             .map(|v| File::from(v.unwrap()))
+            //             .collect(),
+            //     );
+            // }
 
-            if let Some(ft) = e.data_transfer() {
-                return Msg::Files(
-                    js_sys::try_iter(&ft.files().unwrap())
-                        .unwrap()
-                        .unwrap()
-                        .map(|v| File::from(v.unwrap()))
-                        .collect(),
-                );
-            }
-
-            Msg::Nop
+            Msg::FileDropped(e)
         });
 
         let (state, spinner_div_class) = match self.state {
@@ -194,7 +225,7 @@ impl Component for App {
                 negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
                 HNB (Hydroxy naphthol blue) dye."}</p>
                 </div>
-                <div class=spinner_div_class>
+                <div class={spinner_div_class}>
                     <div class="compute-modal-inner">
                         <p>
                             {state}
@@ -206,21 +237,29 @@ impl Component for App {
                 </div>
                 <div>
                     <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
-                    <div class="drag-and-drop" ondrop=ondrop ondragover=ondragover>
+                    <div class="drag-and-drop" ondrop={ondrop} ondragover={ondragover}>
                         {"Drag a file here or select an image."}
-                        <label class=classes!("btn","file-btn")>
-                            <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
+                        <label class={classes!("btn","file-btn")}>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple=false
+                                onchange={ctx.link().callback(move |e: Event| {
                                     let mut result = Vec::new();
-                                    if let ChangeData::Files(files) = value {
+                                    let input: HtmlInputElement = e.target_unchecked_into();
+
+                                    if let Some(files) = input.files() {
                                         let files = js_sys::try_iter(&files)
-                                            .unwrap()
-                                            .unwrap()
-                                            .into_iter()
-                                            .map(|v| File::from(v.unwrap()));
+                                            .unwrap_throw()
+                                            .unwrap_throw()
+                                            .map(|v| web_sys::File::from(v.unwrap_throw()))
+                                            .map(File::from);
                                         result.extend(files);
                                     }
-                                    Msg::Files(result)
-                                })/>
+                                    assert!(result.len()==1);
+                                    Msg::FileChanged(result.pop().unwrap_throw())
+                                    // Msg::Files(result)
+                                })}/>
                             {"Select file..."}
                         </label>
                     </div>
@@ -251,7 +290,7 @@ impl App {
     fn view_file_info(&self) -> Html {
         if let Some(file_info) = &self.file_info {
             html! {
-                <p>{file_info.file_data.name.as_str()}</p>
+                <p>{file_info.file_data.name().as_str()}</p>
             }
         } else {
             html! {}
@@ -277,7 +316,7 @@ impl App {
     fn update_canvas_contents(&self) {
         if let Some(file_info) = &self.file_info {
             let mut im_orig = self.im_orig.borrow_mut();
-            let fname = file_info.file_data.name.as_str();
+            let fname = file_info.file_data.name().as_str();
             im_orig.draw_image(&file_info.img, fname);
             let image_data = im_orig.get_data();
 
