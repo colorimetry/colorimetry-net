@@ -15,9 +15,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source $HOME/.cargo/env
 
 # Install cobalt
-curl --silent -L -o /tmp/cobalt.tar.gz https://github.com/cobalt-org/cobalt.rs/releases/download/v0.16.3/cobalt-v0.16.3-x86_64-unknown-linux-gnu.tar.gz
-tar xzf /tmp/cobalt.tar.gz
-mv cobalt $HOME/.cargo/bin/cobalt
+cargo install cobalt-bin --version 0.16.3
 
 # Build static site with cobalt
 cd site-base
