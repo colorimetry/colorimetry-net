@@ -33,3 +33,9 @@ See `LICENSE_MIT` or `LICENSE_APACHE`. Take your pick.
 build.sh
 ```
 <a href="https://www.netlify.com"><img src="https://www.netlify.com/img/global/badges/netlify-color-bg.svg" alt="Deploys by Netlify" /></a>
+
+Using docker:
+
+```
+build build .
+```
