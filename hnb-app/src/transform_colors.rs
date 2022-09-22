@@ -32,14 +32,14 @@ pub fn saturate_and_rotate(data: &mut [u8]) {
         let rgb: palette::rgb::Rgb<_, u8> = pix.color;
         let rgb_f32: palette::rgb::Rgb<_, f32> = rgb.into_format();
 
-        use palette::ConvertInto;
-        let mut hsl_f32: palette::Hsl<palette::encoding::Srgb, f32> = rgb_f32.convert_into();
+        use palette::IntoColor;
+        let mut hsl_f32: palette::Hsl<palette::encoding::Srgb, f32> = rgb_f32.into_color();
 
         hsl_f32.hue = palette::RgbHue::from_degrees(hsl_f32.hue.to_degrees() + 180.0);
 
         hsl_f32.saturation *= 4.0;
 
-        let rgb_f32: palette::rgb::Rgb<_, f32> = hsl_f32.convert_into();
+        let rgb_f32: palette::rgb::Rgb<_, f32> = hsl_f32.into_color();
         let rgb_u8: palette::rgb::Rgb<_, u8> = rgb_f32.into_format();
         pix.color = rgb_u8;
     }
@@ -65,8 +65,8 @@ pub fn color_stretch(data: &mut [u8]) {
         let rgb: palette::rgb::Rgb<_, u8> = pix.color;
         let rgb_f32: palette::rgb::Rgb<_, f32> = rgb.into_format();
 
-        use palette::ConvertInto;
-        let mut hsl_f32: palette::Hsl<palette::encoding::Srgb, f32> = rgb_f32.convert_into();
+        use palette::IntoColor;
+        let mut hsl_f32: palette::Hsl<palette::encoding::Srgb, f32> = rgb_f32.into_color();
 
         // Get hue in radians
         let hue = hsl_f32.hue.to_radians();
@@ -82,7 +82,7 @@ pub fn color_stretch(data: &mut [u8]) {
 
         hsl_f32.saturation *= 4.0;
 
-        let rgb_f32: palette::rgb::Rgb<_, f32> = hsl_f32.convert_into();
+        let rgb_f32: palette::rgb::Rgb<_, f32> = hsl_f32.into_color();
         let rgb_u8: palette::rgb::Rgb<_, u8> = rgb_f32.into_format();
         pix.color = rgb_u8;
     }
