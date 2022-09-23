@@ -19,10 +19,6 @@ cargo install cobalt-bin --version 0.16.3
 
 # Build static site with cobalt
 cd site-base
-mkdir -p _data
-echo -n "git_rev: " > _data/metadata.yaml
-git describe --always --dirty=-modified >> _data/metadata.yaml
-cat  _data/metadata.yaml
 rm -rf _site
 cobalt build
 find _site # debug: what was built for cobalt?
