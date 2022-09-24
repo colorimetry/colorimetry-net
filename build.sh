@@ -24,8 +24,11 @@ cobalt build
 find _site # debug: what was built for cobalt?
 cd ..
 
-# Install wasm-pack
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+# Install wasm-pack This is mostly according to
+# https://rustwasm.github.io/wasm-pack/installer/ but use bash instead of sh due
+# to https://github.com/rustwasm/wasm-pack/issues/1159 which seems not fixed in
+# the published version yet.
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
 
 cd hnb-app
 
