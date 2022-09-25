@@ -34,8 +34,9 @@ build.sh
 ```
 <a href="https://www.netlify.com"><img src="https://www.netlify.com/img/global/badges/netlify-color-bg.svg" alt="Deploys by Netlify" /></a>
 
-Using docker:
+Using docker, this builds all output as static files into the `dist` directory
+in the docker image:
 
 ```
-build build .
+docker build .
 ```

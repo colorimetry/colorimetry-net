@@ -10,3 +10,5 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 ADD . .
 
 RUN ./build.sh
+
+# This builds all output as static files into the `dist` directory.
