@@ -35,8 +35,8 @@ build.sh
 <a href="https://www.netlify.com"><img src="https://www.netlify.com/img/global/badges/netlify-color-bg.svg" alt="Deploys by Netlify" /></a>
 
 Using docker, this builds all output as static files into the `dist` directory
-in the docker image:
+in the docker image, which will be tagged as `colorimetry-net:latest`:
 
 ```
-docker build .
+docker build -t colorimetry-net:latest .
 ```
