@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 
 const TEXTBOX_HEIGHT_PX: i32 = 20;
 
+#[derive(PartialEq, Eq)]
 pub struct PositionInfo {
     /// the dimension of the div containing both canvases, when known
     image_dims: Option<(u32, u32)>,
@@ -69,11 +70,10 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen]
 pub fn run_app() -> Result<(), JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
-    // yew::start_app::<app::App>();
-    yew::initialize();
-    let document = yew::utils::document();
+
+    let document = gloo_utils::document();
     let div_wrapper: web_sys::Element = document.query_selector("#app-main").unwrap().unwrap();
-    yew::app::App::<app::App>::new().mount(div_wrapper);
-    yew::run_loop();
+
+    yew::start_app_in_element::<app::App>(div_wrapper);
     Ok(())
 }
