@@ -1,6 +1,12 @@
 name: Cargo Check
-# Trigger the workflow on push or pull request
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # At 23:25 on Thursday.
+    - cron: "25 23 * * 4"
+
 jobs:
   check:
     runs-on: ubuntu-latest
