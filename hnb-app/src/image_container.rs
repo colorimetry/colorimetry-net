@@ -96,8 +96,8 @@ impl ImCanvasWrapper {
 
             let text = match self.im_type {
                 ImType::Original => fname.to_string(),
-                ImType::Rotated => format!("{}: Color Rotated", fname),
-                ImType::Stretch => format!("{}: Color Stretched", fname),
+                ImType::Rotated => format!("{fname}: Color Rotated"),
+                ImType::Stretch => format!("{fname}: Color Stretched"),
             };
             self.fname = fname.to_string();
             self.draw_text(ctx, &text);

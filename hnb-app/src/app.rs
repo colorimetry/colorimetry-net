@@ -243,7 +243,7 @@ impl Component for App {
 
 fn render_error(err_str: &str) -> Html {
     html! {
-        <p>{format!("ERROR: {}", err_str)}</p>
+        <p>{format!("ERROR: {err_str}")}</p>
     }
 }
 
