@@ -247,7 +247,7 @@ impl Component for ImageContainer {
         let cw = self.canvas_wrapper.borrow();
         let btn_text = cw.button_text();
         let pi = cw.position_info.borrow();
-        let button = if cw.fname.is_empty() {
+        let button = if !cw.fname.is_empty() {
             html! {
                 <button class=classes!("im-btn","btn") onclick=self.link.callback(|_| Msg::Clicked)>{ btn_text }</button>
             }
