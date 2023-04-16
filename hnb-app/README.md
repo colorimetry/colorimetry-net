@@ -24,6 +24,9 @@ When building for the first time, ensure to install dependencies first.
 yarn install
 ```
 
+You may need to set the `NODE_OPTIONS` environment variable to
+`--openssl-legacy-provider` for this next step to work:
+
 ```
 yarn run build
 ```
