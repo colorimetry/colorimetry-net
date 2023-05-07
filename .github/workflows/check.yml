@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup Rust
-        dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
       - name: Run fmt
