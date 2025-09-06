@@ -11,12 +11,14 @@ license = "MIT/Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+gloo-file = "0.3"
 log = "0.4"
 wasm-bindgen = "0.2.82"
 wasm-logger = "0.2"
-yew = "0.18"
+yew = { version = "0.21", default-features = false, features = ["csr"] }
 js-sys = "0.3"
-palette = {version="0.5", default-features=false, features=["libm"]}
+palette = { version = "0.5", default-features = false, features = ["libm"] }
+uuid = { version = "1.7", default-features = false, features = ["v4", "js"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

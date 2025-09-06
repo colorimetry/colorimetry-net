@@ -1,33 +1,38 @@
+use gloo_file::callbacks::FileReader;
 use js_sys::{Array, Uint8Array};
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use wasm_bindgen::JsCast;
 use wasm_bindgen::{closure::Closure, JsValue};
-use web_sys::{Blob, DragEvent, File, HtmlImageElement, Url};
-use yew::services::reader::{FileData, ReaderService, ReaderTask};
-use yew::{classes, html, ChangeData, Component, ComponentLink, Html, ShouldRender};
+use web_sys::{Blob, HtmlImageElement, Url};
+use yew::{html, Component, Context, Html, Properties};
 
 use crate::image_container::{ImCanvasWrapper, ImType, ImageContainer};
 
-use crate::PositionInfo;
+use crate::{file_input::FileInput, PositionInfo};
 
 pub struct App {
-    link: ComponentLink<Self>,
-    image_loaded_closure: Closure<dyn FnMut(JsValue)>,
-    image_error_closure: Closure<dyn FnMut(JsValue)>,
-    tasks: Vec<ReaderTask>,
+    readers: HashMap<String, FileReader>,
     file_info: Option<FileInfo>,
     im_orig: Rc<RefCell<ImCanvasWrapper>>,
     im_rotated: Rc<RefCell<ImCanvasWrapper>>,
     im_stretch: Rc<RefCell<ImCanvasWrapper>>,
     state: AppState,
     error_log: Vec<String>,
-    position_info: Rc<RefCell<PositionInfo>>,
+    /// A count that changes when the image is updated, to force calling the
+    /// ImageContainer::view() method to use the potentially new width and
+    /// height of the HTML canvas element.
+    count: u8,
 }
 
 pub enum AppState {
     Ready,
     ReadingFile,
     DecodingImage(FileInfo),
+}
+
+pub struct FileData {
+    content: Vec<u8>,
+    name: String,
 }
 
 pub struct FileInfo {
@@ -37,63 +42,56 @@ pub struct FileInfo {
 
 pub enum Msg {
     FileLoaded(FileData),
-    Files(Vec<File>),
+    Files(Vec<gloo_file::File>),
     ImageLoaded,
     ImageErrored(String),
-    Nop,
+}
+
+#[derive(PartialEq, Properties)]
+pub struct AppProps {
+    pub position_info: Rc<RefCell<PositionInfo>>,
 }
 
 impl Component for App {
     type Message = Msg;
-    type Properties = ();
+    type Properties = AppProps;
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let link2 = link.clone();
-        let image_loaded_closure = Closure::wrap(Box::new(move |_| {
-            link2.send_message(Msg::ImageLoaded);
-        }) as Box<dyn FnMut(JsValue)>);
-
-        let link2 = link.clone();
-        let image_error_closure = Closure::wrap(Box::new(move |arg| {
-            // let err_str = format!("Failed to load image.{:?}", arg);
-            let err_str = "Failed to load image.".into();
-            log::error!("{:?}", arg);
-            link2.send_message(Msg::ImageErrored(err_str));
-        }) as Box<dyn FnMut(_)>);
-
-        let position_info = Rc::new(RefCell::new(PositionInfo::new()));
-
-        App {
-            link,
-            image_loaded_closure,
-            image_error_closure,
-            tasks: vec![],
-            im_orig: ImCanvasWrapper::new(ImType::Original, position_info.clone()),
-            im_rotated: ImCanvasWrapper::new(ImType::Rotated, position_info.clone()),
-            im_stretch: ImCanvasWrapper::new(ImType::Stretch, position_info.clone()),
+    fn create(ctx: &Context<Self>) -> Self {
+        Self {
+            im_orig: Rc::new(RefCell::new(ImCanvasWrapper::new(
+                ImType::Original,
+                ctx.props().position_info.clone(),
+            ))),
+            im_rotated: Rc::new(RefCell::new(ImCanvasWrapper::new(
+                ImType::Rotated,
+                ctx.props().position_info.clone(),
+            ))),
+            im_stretch: Rc::new(RefCell::new(ImCanvasWrapper::new(
+                ImType::Stretch,
+                ctx.props().position_info.clone(),
+            ))),
             file_info: None,
             state: AppState::Ready,
             error_log: vec![],
-            position_info,
+            readers: Default::default(),
+            count: 0,
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn rendered(&mut self, _first_render: bool) {
+    fn rendered(&mut self, _ctx: &Context<Self>, _first_render: bool) {
         self.update_canvas_contents();
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::ImageLoaded => {
+                log::info!("Msg::ImageLoaded");
                 // The image has finished decoding and we can display it now.
                 let old_state = std::mem::replace(&mut self.state, AppState::Ready);
 
                 if let AppState::DecodingImage(file_info) = old_state {
-                    self.position_info
+                    ctx.props()
+                        .position_info
                         .borrow_mut()
                         .update_for_image(&file_info.img);
 
@@ -102,11 +100,13 @@ impl Component for App {
                 }
             }
             Msg::ImageErrored(err_str) => {
+                log::info!("Msg::ImageErrored");
                 // The image was not decoded due to an error.
                 self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
             Msg::FileLoaded(file_data) => {
+                log::info!("Msg::FileLoaded {}", file_data.name);
                 // The bytes of the file have been read.
 
                 // Convert to a Uint8Array and initiate the image decoding.
@@ -117,10 +117,32 @@ impl Component for App {
                 let blob = Blob::new_with_u8_array_sequence(parts.as_ref()).unwrap();
                 let img = HtmlImageElement::new().unwrap();
 
-                img.set_onload(Some(self.image_loaded_closure.as_ref().unchecked_ref()));
+                // TODO: check that these callback are always received.
 
-                img.set_onerror(Some(self.image_error_closure.as_ref().unchecked_ref()));
+                // img load event
+                let callback = ctx.link().callback(move |_| Msg::ImageLoaded);
 
+                let on_load_closure = Closure::wrap(Box::new(move || {
+                    callback.emit(()); // dummy arg for callback
+                }) as Box<dyn FnMut()>);
+
+                img.set_onload(Some(on_load_closure.as_ref().unchecked_ref()));
+                on_load_closure.forget();
+
+                // img error event
+                let callback = ctx.link().callback(move |arg| {
+                    log::error!("{:?}", arg);
+                    Msg::ImageErrored("Failed to load image.".into())
+                });
+
+                let on_error_closure = Closure::wrap(Box::new(move || {
+                    callback.emit(()); // dummy arg for callback
+                }) as Box<dyn FnMut()>);
+
+                img.set_onerror(Some(on_error_closure.as_ref().unchecked_ref()));
+                on_error_closure.forget();
+
+                // img set source
                 img.set_src(&Url::create_object_url_with_blob(&blob).unwrap());
 
                 self.state = AppState::DecodingImage(FileInfo { file_data, img });
@@ -129,44 +151,29 @@ impl Component for App {
                 // The user has selected file(s).
                 self.error_log.clear();
 
-                self.state = AppState::ReadingFile;
-
                 for file in files.into_iter() {
+                    log::info!("Msg::Files: file {}", file.name());
+                    let file_name = file.name();
                     let task = {
-                        let callback = self.link.callback(Msg::FileLoaded);
-                        ReaderService::read_file(file, callback).unwrap()
+                        let file_name = file_name.clone();
+                        let link = ctx.link().clone();
+                        gloo_file::callbacks::read_as_bytes(&file, move |res| {
+                            link.send_message(Msg::FileLoaded(FileData {
+                                name: file_name,
+                                content: res.expect("failed to read file"),
+                            }))
+                        })
                     };
-                    self.tasks.push(task);
+                    self.readers.insert(file_name, task);
                 }
+
+                self.state = AppState::ReadingFile;
             }
-            Msg::Nop => return false,
         }
         true
     }
 
-    fn view(&self) -> Html {
-        let ondragover = self.link.callback(|e: DragEvent| {
-            // prevent default to allow drop
-            e.prevent_default();
-            Msg::Nop
-        });
-
-        let ondrop = self.link.callback(|e: DragEvent| {
-            e.prevent_default();
-
-            if let Some(ft) = e.data_transfer() {
-                return Msg::Files(
-                    js_sys::try_iter(&ft.files().unwrap())
-                        .unwrap()
-                        .unwrap()
-                        .map(|v| File::from(v.unwrap()))
-                        .collect(),
-                );
-            }
-
-            Msg::Nop
-        });
-
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let (state, spinner_div_class) = match self.state {
             AppState::Ready => ("Ready", "display-none"),
             AppState::ReadingFile => ("Reading file", "compute-modal"),
@@ -194,7 +201,7 @@ impl Component for App {
                 negative outcomes of SARS-CoV-2 tests using an isothermal LAMP reaction with \
                 HNB (Hydroxy naphthol blue) dye."}</p>
                 </div>
-                <div class=spinner_div_class>
+                <div class={spinner_div_class}>
                     <div class="compute-modal-inner">
                         <p>
                             {state}
@@ -206,23 +213,17 @@ impl Component for App {
                 </div>
                 <div>
                     <h2><span class="stage">{"1"}</span>{"Choose an image file."}</h2>
-                    <div class="drag-and-drop" ondrop=ondrop ondragover=ondragover>
+                    <div class="drag-and-drop" >
                         {"Drag a file here or select an image."}
-                        <label class=classes!("btn","file-btn")>
-                            <input type="file" accept="image/*" onchange=self.link.callback(move |value| {
-                                    let mut result = Vec::new();
-                                    if let ChangeData::Files(files) = value {
-                                        let files = js_sys::try_iter(&files)
-                                            .unwrap()
-                                            .unwrap()
-                                            .into_iter()
-                                            .map(|v| File::from(v.unwrap()));
-                                        result.extend(files);
-                                    }
-                                    Msg::Files(result)
-                                })/>
-                            {"Select file..."}
-                        </label>
+
+                        <FileInput
+                            button_text={"Select file..."}
+                            multiple=false
+                            accept={"image/*"}
+                            on_changed={ctx.link().callback(|files| {
+                                Msg::Files(files)
+                            })}
+                        />
                     </div>
                 </div>
 
@@ -230,9 +231,9 @@ impl Component for App {
                 <div id="hnb-app-canvas-div">
                     <h2><span class="stage">{"2"}</span>{"View the original, Color Stretched and Color Rotated images."}</h2>
                     <div id="hnb-app-canvas-container">
-                        <ImageContainer canvas_wrapper={self.im_orig.clone()} />
-                        <ImageContainer canvas_wrapper={self.im_stretch.clone()} />
-                        <ImageContainer canvas_wrapper={self.im_rotated.clone()} />
+                        <ImageContainer count={self.count} im_type={ImType::Original} canvas_wrapper={self.im_orig.clone()}/>
+                        <ImageContainer count={self.count} im_type={ImType::Rotated} canvas_wrapper={self.im_rotated.clone()}/>
+                        <ImageContainer count={self.count} im_type={ImType::Stretch} canvas_wrapper={self.im_stretch.clone()}/>
                     </div>
                 </div>
                 { self.view_errors() }
@@ -274,20 +275,25 @@ impl App {
     ///
     /// We need to do this either when we get a new image decoded or
     /// when the dimensions of our container change.
-    fn update_canvas_contents(&self) {
+    fn update_canvas_contents(&mut self) {
+        log::info!("App::update_canvas_contents");
         if let Some(file_info) = &self.file_info {
-            let mut im_orig = self.im_orig.borrow_mut();
+            let im_orig = &mut self.im_orig;
             let fname = file_info.file_data.name.as_str();
-            im_orig.draw_image(&file_info.img, fname);
-            let image_data = im_orig.get_data();
+            im_orig.borrow_mut().draw_image(&file_info.img, fname);
+            let image_data = im_orig.borrow().get_data();
 
             if let Some(image_data) = image_data {
-                let mut im_rotated = self.im_rotated.borrow_mut();
-                im_rotated.draw_data(&image_data, fname);
+                log::info!("App::update_canvas_contents got image data");
+                let im_rotated = &mut self.im_rotated;
+                im_rotated.borrow_mut().draw_data(&image_data, fname);
 
-                let mut im_stretch = self.im_stretch.borrow_mut();
-                im_stretch.draw_data(&image_data, fname);
+                let im_stretch = &mut self.im_stretch;
+                im_stretch.borrow_mut().draw_data(&image_data, fname);
             }
+
+            // Force ImageContainer::view() to be called.
+            self.count = self.count.wrapping_add(1);
         }
     }
 }

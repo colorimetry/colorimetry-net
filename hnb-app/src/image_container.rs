@@ -1,22 +1,32 @@
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
-use yew::prelude::{
-    classes, html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender,
-};
+use yew::{classes, html, Component, Context, Html, NodeRef, Properties};
 
 use crate::PositionInfo;
 
 const TEXT_PAD_PX: i32 = 2;
 const FONT: &str = "16px sans-serif";
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub enum ImType {
+    #[default]
     Original,
     Rotated,
     Stretch,
 }
 
+impl std::fmt::Display for ImType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ImType::Original => write!(f, "Original"),
+            ImType::Rotated => write!(f, "Color Rotated"),
+            ImType::Stretch => write!(f, "Color Stretched"),
+        }
+    }
+}
+
+#[derive(PartialEq)]
 pub struct ImCanvasWrapper {
     im_type: ImType,
     fname: String,
@@ -25,21 +35,28 @@ pub struct ImCanvasWrapper {
     position_info: Rc<RefCell<PositionInfo>>,
 }
 
+impl Drop for ImCanvasWrapper {
+    fn drop(&mut self) {
+        log::info!("Dropping ImCanvasWrapper for {:?}", self.im_type);
+    }
+}
+
 impl ImCanvasWrapper {
-    pub fn new(im_type: ImType, position_info: Rc<RefCell<PositionInfo>>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
+    pub fn new(im_type: ImType, position_info: Rc<RefCell<PositionInfo>>) -> Self {
+        log::info!("Creating ImCanvasWrapper for {:?}", im_type);
+        Self {
             im_type,
             fname: "".to_string(),
             context_2d: None,
             canvas: None,
             position_info,
-        }))
+        }
     }
-}
 
-impl ImCanvasWrapper {
     pub fn draw_image(&mut self, img: &web_sys::HtmlImageElement, fname: &str) {
+        log::info!("ImCanvasWrapper::draw_image {}", fname);
         if let Some(ctx) = &self.context_2d {
+            log::info!("  got context_2d");
             ctx.clear_rect(
                 0.0,
                 0.0,
@@ -60,10 +77,13 @@ impl ImCanvasWrapper {
             let text = fname;
             self.fname = fname.to_string();
             self.draw_text(ctx, text);
+        } else {
+            log::error!("  no context_2d");
         }
     }
 
     pub fn draw_data(&mut self, image_data: &web_sys::ImageData, fname: &str) {
+        log::info!("ImCanvasWrapper::draw_data {}", self.im_type);
         let mut data = image_data.data();
         match self.im_type {
             ImType::Original => {}
@@ -117,6 +137,7 @@ impl ImCanvasWrapper {
     }
 
     pub fn get_data(&self) -> Option<web_sys::ImageData> {
+        log::info!("ImCanvasWrapper::get_data {}", self.fname);
         if let Some(ctx) = &self.context_2d {
             let image_data: web_sys::ImageData = ctx
                 .get_image_data(
@@ -158,57 +179,74 @@ impl ImCanvasWrapper {
 }
 
 pub struct ImageContainer {
-    link: ComponentLink<Self>,
     node_ref: NodeRef,
-    canvas_wrapper: Rc<RefCell<ImCanvasWrapper>>,
 }
 
 pub enum Msg {
     Clicked,
 }
 
-#[derive(Properties, Clone)]
+#[derive(PartialEq, Properties)]
 pub struct Props {
+    pub im_type: ImType,
     pub canvas_wrapper: Rc<RefCell<ImCanvasWrapper>>,
+    /// A count that changes when the image is updated, to force calling the
+    /// ImageContainer::view() method to display the potentially new width and
+    /// height of the HTML canvas element.
+    pub count: u8,
 }
 
 impl Component for ImageContainer {
     type Message = Msg;
     type Properties = Props;
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
+        log::info!("Creating ImageContainer for {:?}", ctx.props().im_type);
         Self {
-            link,
             node_ref: NodeRef::default(),
-            canvas_wrapper: props.canvas_wrapper,
         }
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.canvas_wrapper = props.canvas_wrapper;
-        true
-    }
-
-    fn rendered(&mut self, _first_render: bool) {
+    fn rendered(&mut self, ctx: &Context<Self>, _first_render: bool) {
+        log::info!(
+            "ImageContainer::rendered {}",
+            ctx.props().canvas_wrapper.borrow().im_type
+        );
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
-        if self.canvas_wrapper.borrow().canvas.is_none() {
-            assert!(self.canvas_wrapper.borrow().context_2d.is_none());
+        if ctx.props().canvas_wrapper.borrow().canvas.is_none() {
+            log::info!(
+                "  setting up canvas and context_2d for {:?}",
+                ctx.props().canvas_wrapper.borrow().im_type
+            );
+            assert!(ctx.props().canvas_wrapper.borrow().context_2d.is_none());
             let canvas = self.node_ref.cast::<HtmlCanvasElement>().unwrap();
 
             let context = CanvasRenderingContext2d::from(JsValue::from(
                 canvas.get_context("2d").unwrap().unwrap(),
             ));
 
-            let mut canvas_wrapper = self.canvas_wrapper.borrow_mut();
+            let canvas_wrapper = &mut ctx.props().canvas_wrapper.borrow_mut();
             canvas_wrapper.canvas.replace(canvas);
             canvas_wrapper.context_2d.replace(context);
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn changed(&mut self, ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
+        log::info!(
+            "ImageContainer::changed {}",
+            ctx.props().canvas_wrapper.borrow().im_type
+        );
+        true
+    }
+
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        log::info!(
+            "ImageContainer::update {}",
+            ctx.props().canvas_wrapper.borrow().im_type
+        );
         match msg {
             Msg::Clicked => {
-                let canvas_wrapper = self.canvas_wrapper.borrow();
+                let canvas_wrapper = ctx.props().canvas_wrapper.borrow();
 
                 let data_url = canvas_wrapper
                     .canvas
@@ -240,27 +278,40 @@ impl Component for ImageContainer {
                 web_sys::Url::revoke_object_url(&data_url).unwrap();
             }
         }
-        false
+        true
     }
 
-    fn view(&self) -> Html {
-        let cw = self.canvas_wrapper.borrow();
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let cw = &ctx.props().canvas_wrapper.borrow();
         let btn_text = cw.button_text();
-        let pi = cw.position_info.borrow();
+        let pi = &cw.position_info;
         let button = if !cw.fname.is_empty() {
             html! {
-                <button class=classes!("im-btn","btn") onclick=self.link.callback(|_| Msg::Clicked)>{ btn_text }</button>
+                <button
+                    class={classes!("im-btn","btn")}
+                    onclick={ctx.link().callback(|_| Msg::Clicked)}
+                >
+                    { btn_text }
+                </button>
             }
         } else {
             html! {<span></span>}
         };
+        let width = pi.borrow().canv_width_str();
+        let height = pi.borrow().canv_height_str();
+        log::info!(
+            "ImageContainer::view {} {}x{}",
+            ctx.props().im_type,
+            width,
+            height
+        );
         html! {
             <span class="im-span">
                 <div>
                     {button}
                 </div>
                 <div>
-                    <canvas class="im-canvas" ref={self.node_ref.clone()} width={pi.canv_width_str()} height={pi.canv_height_str()} />
+                    <canvas class="im-canvas" ref={&self.node_ref} width={width} height={height} />
                 </div>
             </span>
         }

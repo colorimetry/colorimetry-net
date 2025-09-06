@@ -1,13 +1,18 @@
 #![recursion_limit = "512"]
 
 mod app;
+mod file_input;
 mod image_container;
 mod transform_colors;
 
+use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
+
+use crate::app::AppProps;
 
 const TEXTBOX_HEIGHT_PX: i32 = 20;
 
+#[derive(PartialEq)]
 pub struct PositionInfo {
     /// the dimension of the div containing both canvases, when known
     image_dims: Option<(u32, u32)>,
@@ -16,8 +21,8 @@ pub struct PositionInfo {
     canv_height: i32,
 }
 
-impl PositionInfo {
-    fn new() -> Self {
+impl Default for PositionInfo {
+    fn default() -> Self {
         let image_height = 200;
         let canv_height = image_height + TEXTBOX_HEIGHT_PX;
         Self {
@@ -27,7 +32,9 @@ impl PositionInfo {
             canv_height,
         }
     }
+}
 
+impl PositionInfo {
     /// An image has been loaded, recalculate various sizing info.
     fn update_for_image(&mut self, img: &web_sys::HtmlImageElement) {
         log::info!("got image size {}x{}", img.width(), img.height());
@@ -63,11 +70,17 @@ impl PositionInfo {
 #[wasm_bindgen]
 pub fn run_app() -> Result<(), JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
-    // yew::start_app::<app::App>();
-    yew::initialize();
-    let document = yew::utils::document();
+
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
     let div_wrapper: web_sys::Element = document.query_selector("#app-main").unwrap().unwrap();
-    yew::app::App::<app::App>::new().mount(div_wrapper);
-    yew::run_loop();
+
+    yew::Renderer::<crate::app::App>::with_root_and_props(
+        div_wrapper,
+        AppProps {
+            position_info: Rc::new(RefCell::new(PositionInfo::default())),
+        },
+    )
+    .render();
     Ok(())
 }
