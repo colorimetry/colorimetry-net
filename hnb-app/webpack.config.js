@@ -11,6 +11,9 @@ module.exports = (env, argv) => {
       port: 8000
     },
     entry: './bootstrap.js',
+    experiments: {
+      syncWebAssembly: true,
+    },
     output: {
       path: distPath,
       filename: "hnb-app.js",
