@@ -1,10 +1,8 @@
-# Our netlify build is with ubuntu 20.04, so that is what we use here, too.
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     curl \
-    nodejs \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 

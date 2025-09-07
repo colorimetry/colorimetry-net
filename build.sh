@@ -1,21 +1,27 @@
 #!/bin/bash -x
 set -euo pipefail
 
-# This script was written to run on netlify to build a production release starting
-# from a bare netlify build image.
-
-# Install yarn (1.22.22 is installed by default on netlify, so we keep that).
-rm -rf /opt/buildhome/.yarn
-curl --silent -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.22
-ls $HOME/.yarn
-export PATH="$PATH:$HOME/.yarn/bin"
-
 # Install rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --profile minimal -y
 source $HOME/.cargo/env
 
+# Add wasm target for rust
+rustup target add wasm32-unknown-unknown
+
+# Install cargo-binstall
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+# Install trunk
+cargo binstall trunk@0.21.14
+
+# Build yew app with trunk
+cd hnb-app
+trunk build --release
+find dist # debug: what was built?
+cd ..
+
 # Install cobalt
-cargo install cobalt-bin --version 0.19.6
+cargo binstall cobalt-bin@0.19.6
 
 # Build static site with cobalt
 cd site-base
@@ -24,24 +30,6 @@ cobalt build
 find _site # debug: what was built for cobalt?
 cd ..
 
-# Install wasm-pack This is mostly according to
-# https://rustwasm.github.io/wasm-pack/installer/ but use bash instead of sh due
-# to https://github.com/rustwasm/wasm-pack/issues/1159 which seems not fixed in
-# the published version yet.
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
-
-cd hnb-app
-
-# Let yarn install prereqs
-yarn install
-
-# Build production release using yarn, place it in dist/
-yarn run build
-
-# debug: what was built for yew?
-find dist
-
-cd ..
 
 # Remove debug html page for dev use
 rm -r hnb-app/dist/index.html

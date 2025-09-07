@@ -5,6 +5,7 @@ mod file_input;
 mod image_container;
 mod transform_colors;
 
+use console_error_panic_hook::set_once as set_panic_hook;
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
@@ -66,9 +67,8 @@ impl PositionInfo {
     }
 }
 
-// This is the entry point for the web app
-#[wasm_bindgen]
-pub fn run_app() -> Result<(), JsValue> {
+fn main() -> Result<(), JsValue> {
+    set_panic_hook();
     wasm_logger::init(wasm_logger::Config::default());
 
     let window = web_sys::window().unwrap();

@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <title>HNB enhance (development)</title>
     <link rel="stylesheet" href="/style.css">
+    <base data-trunk-public-url />
 </head>
 
 <body>
@@ -15,7 +16,7 @@
     <div id="app-main">
         Loading...
     </div>
-    <script src="/hnb-app.js"></script>
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" data-bin="hnb-app" />
 </body>
 
 </html>
