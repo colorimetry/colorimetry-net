@@ -1,12 +1,12 @@
 #!/bin/bash -x
-set -o errexit
+set -euo pipefail
 
 # This script was written to run on netlify to build a production release starting
 # from a bare netlify build image.
 
-# Install yarn (1.22.4 is installed by default on netlify, so we keep that).
+# Install yarn (1.22.22 is installed by default on netlify, so we keep that).
 rm -rf /opt/buildhome/.yarn
-curl --silent -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.4
+curl --silent -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.22.22
 ls $HOME/.yarn
 export PATH="$PATH:$HOME/.yarn/bin"
 
@@ -15,7 +15,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source $HOME/.cargo/env
 
 # Install cobalt
-cargo install cobalt-bin --version 0.16.3
+cargo install cobalt-bin --version 0.19.6
 
 # Build static site with cobalt
 cd site-base
