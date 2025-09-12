@@ -38,7 +38,7 @@ impl Default for PositionInfo {
 impl PositionInfo {
     /// An image has been loaded, recalculate various sizing info.
     fn update_for_image(&mut self, img: &web_sys::HtmlImageElement) {
-        log::info!("got image size {}x{}", img.width(), img.height());
+        log::debug!("got image size {}x{}", img.width(), img.height());
         self.image_dims = Some((img.width(), img.height()));
         self.canv_width = img.width() as i32;
         self.image_height = img.height() as i32;
@@ -69,7 +69,7 @@ impl PositionInfo {
 
 fn main() -> Result<(), JsValue> {
     set_panic_hook();
-    wasm_logger::init(wasm_logger::Config::default());
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
 
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();

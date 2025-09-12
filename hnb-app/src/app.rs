@@ -85,7 +85,7 @@ impl Component for App {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::ImageLoaded => {
-                log::info!("Msg::ImageLoaded");
+                log::debug!("Msg::ImageLoaded");
                 // The image has finished decoding and we can display it now.
                 let old_state = std::mem::replace(&mut self.state, AppState::Ready);
 
@@ -100,13 +100,13 @@ impl Component for App {
                 }
             }
             Msg::ImageErrored(err_str) => {
-                log::info!("Msg::ImageErrored");
+                log::debug!("Msg::ImageErrored");
                 // The image was not decoded due to an error.
                 self.error_log.push(err_str);
                 self.state = AppState::Ready;
             }
             Msg::FileLoaded(file_data) => {
-                log::info!("Msg::FileLoaded {}", file_data.name);
+                log::debug!("Msg::FileLoaded {}", file_data.name);
                 // The bytes of the file have been read.
 
                 // Convert to a Uint8Array and initiate the image decoding.
@@ -152,7 +152,7 @@ impl Component for App {
                 self.error_log.clear();
 
                 for file in files.into_iter() {
-                    log::info!("Msg::Files: file {}", file.name());
+                    log::debug!("Msg::Files: file {}", file.name());
                     let file_name = file.name();
                     let task = {
                         let file_name = file_name.clone();
@@ -276,7 +276,7 @@ impl App {
     /// We need to do this either when we get a new image decoded or
     /// when the dimensions of our container change.
     fn update_canvas_contents(&mut self) {
-        log::info!("App::update_canvas_contents");
+        log::debug!("App::update_canvas_contents");
         if let Some(file_info) = &self.file_info {
             let im_orig = &mut self.im_orig;
             let fname = file_info.file_data.name.as_str();
@@ -284,7 +284,7 @@ impl App {
             let image_data = im_orig.borrow().get_data();
 
             if let Some(image_data) = image_data {
-                log::info!("App::update_canvas_contents got image data");
+                log::debug!("App::update_canvas_contents got image data");
                 let im_rotated = &mut self.im_rotated;
                 im_rotated.borrow_mut().draw_data(&image_data, fname);
 
