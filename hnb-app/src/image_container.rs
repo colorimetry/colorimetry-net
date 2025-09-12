@@ -37,13 +37,13 @@ pub struct ImCanvasWrapper {
 
 impl Drop for ImCanvasWrapper {
     fn drop(&mut self) {
-        log::info!("Dropping ImCanvasWrapper for {:?}", self.im_type);
+        log::debug!("Dropping ImCanvasWrapper for {:?}", self.im_type);
     }
 }
 
 impl ImCanvasWrapper {
     pub fn new(im_type: ImType, position_info: Rc<RefCell<PositionInfo>>) -> Self {
-        log::info!("Creating ImCanvasWrapper for {:?}", im_type);
+        log::debug!("Creating ImCanvasWrapper for {:?}", im_type);
         Self {
             im_type,
             fname: "".to_string(),
@@ -54,9 +54,9 @@ impl ImCanvasWrapper {
     }
 
     pub fn draw_image(&mut self, img: &web_sys::HtmlImageElement, fname: &str) {
-        log::info!("ImCanvasWrapper::draw_image {}", fname);
+        log::debug!("ImCanvasWrapper::draw_image {}", fname);
         if let Some(ctx) = &self.context_2d {
-            log::info!("  got context_2d");
+            log::debug!("  got context_2d");
             ctx.clear_rect(
                 0.0,
                 0.0,
@@ -83,7 +83,7 @@ impl ImCanvasWrapper {
     }
 
     pub fn draw_data(&mut self, image_data: &web_sys::ImageData, fname: &str) {
-        log::info!("ImCanvasWrapper::draw_data {}", self.im_type);
+        log::debug!("ImCanvasWrapper::draw_data {}", self.im_type);
         let mut data = image_data.data();
         match self.im_type {
             ImType::Original => {}
@@ -137,7 +137,7 @@ impl ImCanvasWrapper {
     }
 
     pub fn get_data(&self) -> Option<web_sys::ImageData> {
-        log::info!("ImCanvasWrapper::get_data {}", self.fname);
+        log::debug!("ImCanvasWrapper::get_data {}", self.fname);
         if let Some(ctx) = &self.context_2d {
             let image_data: web_sys::ImageData = ctx
                 .get_image_data(
@@ -200,21 +200,21 @@ impl Component for ImageContainer {
     type Message = Msg;
     type Properties = Props;
     fn create(ctx: &Context<Self>) -> Self {
-        log::info!("Creating ImageContainer for {:?}", ctx.props().im_type);
+        log::debug!("Creating ImageContainer for {:?}", ctx.props().im_type);
         Self {
             node_ref: NodeRef::default(),
         }
     }
 
     fn rendered(&mut self, ctx: &Context<Self>, _first_render: bool) {
-        log::info!(
+        log::debug!(
             "ImageContainer::rendered {}",
             ctx.props().canvas_wrapper.borrow().im_type
         );
         // Once rendered, store references for the canvas and 2D context. These can be used for
         // resizing the rendering area when the window or canvas element are resized.
         if ctx.props().canvas_wrapper.borrow().canvas.is_none() {
-            log::info!(
+            log::debug!(
                 "  setting up canvas and context_2d for {:?}",
                 ctx.props().canvas_wrapper.borrow().im_type
             );
@@ -232,7 +232,7 @@ impl Component for ImageContainer {
     }
 
     fn changed(&mut self, ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
-        log::info!(
+        log::debug!(
             "ImageContainer::changed {}",
             ctx.props().canvas_wrapper.borrow().im_type
         );
@@ -240,7 +240,7 @@ impl Component for ImageContainer {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        log::info!(
+        log::debug!(
             "ImageContainer::update {}",
             ctx.props().canvas_wrapper.borrow().im_type
         );
@@ -299,7 +299,7 @@ impl Component for ImageContainer {
         };
         let width = pi.borrow().canv_width_str();
         let height = pi.borrow().canv_height_str();
-        log::info!(
+        log::debug!(
             "ImageContainer::view {} {}x{}",
             ctx.props().im_type,
             width,
