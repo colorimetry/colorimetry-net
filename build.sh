@@ -16,7 +16,7 @@ cargo binstall trunk@0.21.14
 
 # Build yew app with trunk
 cd hnb-app
-trunk build --release
+trunk build --public-url=/hnb-app/ --release
 find dist # debug: what was built?
 cd ..
 
@@ -30,12 +30,8 @@ cobalt build
 find _site # debug: what was built for cobalt?
 cd ..
 
-
-# Remove debug html page for dev use
-rm -r hnb-app/dist/index.html
-
 # Put built yew in cobalt build output dir
-cp hnb-app/dist/* site-base/_site/hnb-app/
+mv hnb-app/dist site-base/_site/hnb-app
 
 # Move entire site into `dist`
 mkdir -p dist

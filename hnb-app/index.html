@@ -3,19 +3,69 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>HNB enhance (development)</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>🧪colorimetry.net - HNB enhance</title>
+    <link data-trunk rel="scss" href="../site-base/style.scss" />
     <base data-trunk-public-url />
 </head>
 
 <body>
-    <h1>HNB enhance (development)</h1>
+    <h1>🧪colorimetry.net👩‍🔬</h1>
+    <div>
+        <h2>HNB enhance</h2>
+        <p>Automatic image enhancement for Hydroxy naphthol blue (HNB) dyes.</p>
+        <div id="app-main">
+            <div class="compute-modal">
+                <div class="compute-modal-inner" ,>
+                    <p>
+                        Loading...
+                    </p>
+                    <div class="lds-ellipsis" ,>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                </div>
+            </div>
 
-    (This is the dev view.)
+        </div>
+        <div class="sourcecode">Source code for this site is at <a
+                href="https://github.com/colorimetry/colorimetry-net">github.com/colorimetry/colorimetry-net</a>.</div>
+        <div>
+            <a href="/about/">About</a> | <a href="/hnb-app/">HNB enhance</a> | <a href="/impressum/">Impressum</a> | <a
+                href="/privacy/">Privacy</a> | <a href="https://app.netlify.com/sites/colorimetry/deploys"><img
+                    class="about-icon" src="/images/netlify-callout-vertical-color-bg.svg"
+                    alt="Deploys by Netlify" /></a>
+        </div>
 
-    <div id="app-main">
-        Loading...
     </div>
+    <noscript>
+        <h1>❌ Error: your browser does not support JavaScript, but this page requires it. ❌</h1>
+    </noscript>
+    <script nomodule>
+        document.body.innerHTML = "<h1>❌ Error: your browser does not support JavaScript modules. ❌</h1>";
+    </script>
+    <script type='text/javascript'>
+        // Check if WebAssembly is supported. Code from
+        // https://stackoverflow.com/questions/47879864 .
+        const supported = (() => {
+            try {
+                if (typeof WebAssembly === "object"
+                    && typeof WebAssembly.instantiate === "function") {
+                    const module = new WebAssembly.Module(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
+                    if (module instanceof WebAssembly.Module)
+                        return new WebAssembly.Instance(module) instanceof WebAssembly.Instance;
+                }
+            } catch (e) {
+            }
+
+            return false;
+        })();
+        if (!supported) {
+            document.body.innerHTML = "<h1>❌ Error: your browser does not support WebAssembly. ❌</h1>" +
+                "<p>For a list of supported browsers, see <a href=\"https://caniuse.com/#search=WebAssembly\">this</a>.<p>";
+        }
+    </script>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" data-bin="hnb-app" />
 </body>
 
