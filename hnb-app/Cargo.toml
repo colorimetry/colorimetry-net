@@ -16,7 +16,7 @@ wasm-logger = "0.2"
 yew = { version = "0.21", default-features = false, features = ["csr"] }
 js-sys = "0.3"
 palette = { version = "0.5", default-features = false, features = ["libm"] }
-uuid = { version = "1.7", default-features = false, features = ["v4", "js"] }
+uuid = { version = "1.20", default-features = false, features = ["v4", "js"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
